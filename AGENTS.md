@@ -7,7 +7,7 @@ antes de escrever código.
 ## Banco
 - Toda mudança de banco é uma migração nova em `supabase/migrations`, numerada em sequência. Nunca editar migração já aplicada.
 - Nunca rodar DROP, DELETE sem WHERE, TRUNCATE ou ALTER destrutivo sem aprovação explícita do Tiago.
-- Toda tabela nova: `empresa_id`, RLS ligada, policy e grant explícitos. Tabela sem policy = só o servidor acessa.
+- Toda tabela nova: `empresa_id`, RLS ligada, policy e grant explícitos. Tabela sem policy = só o servidor acessa. Única exceção: `laura.webhook_eventos` — a coluna chega nula e o worker preenche ao identificar a empresa.
 - Regra de privacidade é do banco, não da tela. O técnico não vê telefone de cliente: ele só lê por `laura.meus_atendimentos()`.
 - Dinheiro em centavos (integer). Nunca float.
 

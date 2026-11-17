@@ -5,6 +5,7 @@
 
 create schema if not exists laura;
 grant usage on schema laura to authenticated, service_role;
+-- anon não usa este schema: o site público sempre passa pelo servidor (service_role).
 
 -- ───────────────────────── Tipos
 create type laura.papel as enum ('dono', 'atendente', 'tecnico');
@@ -157,6 +158,8 @@ create table laura.webhook_eventos (
   provedor text not null check (provedor in ('whatsapp', 'mercadopago')),
   evento_id text not null,
   payload jsonb not null,
+  -- exceção à regra do empresa_id: fica nulo na chegada e o worker preenche ao identificar a empresa
+  empresa_id uuid null references laura.empresas on delete set null,
   recebido_em timestamptz not null default now(),
   processado_em timestamptz,
   tentativas integer not null default 0,
@@ -164,6 +167,7 @@ create table laura.webhook_eventos (
   unique (provedor, evento_id)
 );
 create index on laura.webhook_eventos (recebido_em) where processado_em is null;
+create index on laura.webhook_eventos (empresa_id);
 
 create table laura.uso_ia (
   id bigint generated always as identity primary key,
@@ -257,6 +261,8 @@ $$;
 alter table laura.empresas enable row level security;
 alter table laura.membros enable row level security;
 alter table laura.admins_plataforma enable row level security;
+alter table laura.atendimentos enable row level security;
+alter table laura.atendimento_eventos enable row level security;
 alter table laura.whatsapp_contas enable row level security;
 alter table laura.webhook_eventos enable row level security;
 alter table laura.uso_ia enable row level security;
@@ -269,7 +275,7 @@ do $$
 declare t text;
 begin
   foreach t in array array[
-    'clientes', 'servicos', 'areas_atendimento', 'atendimentos', 'atendimento_eventos',
+    'clientes', 'servicos', 'areas_atendimento',
     'conversas', 'mensagens', 'lembretes', 'pesquisas'
   ] loop
     execute format('alter table laura.%I enable row level security', t);
@@ -279,6 +285,21 @@ begin
     execute format('grant select, insert, update, delete on laura.%I to authenticated', t);
   end loop;
 end $$;
+
+-- atendimentos: não se apaga, se cancela. authenticated não tem DELETE nem policy de DELETE.
+grant select, insert, update on laura.atendimentos to authenticated;
+create policy atendimento_ver on laura.atendimentos for select to authenticated
+  using (laura.gere(empresa_id));
+create policy atendimento_criar on laura.atendimentos for insert to authenticated
+  with check (laura.gere(empresa_id));
+create policy atendimento_editar on laura.atendimentos for update to authenticated
+  using (laura.gere(empresa_id)) with check (laura.gere(empresa_id));
+
+-- atendimento_eventos: trilha de status, só leitura para authenticated.
+-- Nem insert: quem escreve é o gatilho e a função laura.atualizar_status(), ambas security definer.
+grant select on laura.atendimento_eventos to authenticated;
+create policy atendimento_eventos_ver on laura.atendimento_eventos for select to authenticated
+  using (laura.gere(empresa_id));
 
 grant select, update on laura.empresas to authenticated;
 create policy empresa_ver on laura.empresas for select to authenticated
@@ -303,6 +324,7 @@ create policy auditoria_ver on laura.auditoria for select to authenticated using
 grant all on all tables in schema laura to service_role;
 grant usage, select on all sequences in schema laura to service_role;
 alter default privileges in schema laura grant all on tables to service_role;
+alter default privileges in schema laura grant usage, select on sequences to service_role;
 
 -- ───────────────────────── Acesso do técnico
 -- Agenda dos próximos 7 dias, com nome e endereço do cliente e SEM telefone.
@@ -352,6 +374,7 @@ begin
 end $$;
 
 -- Vagas livres = vagas por período × técnicos ativos − atendimentos já marcados.
+-- Só o servidor chama: aceita qualquer empresa_id, não é para o navegador.
 create function laura.vagas_livres(p_empresa uuid, p_data date, p_periodo laura.periodo)
 returns integer
 language sql stable security definer set search_path = '' as $$
@@ -364,12 +387,6 @@ language sql stable security definer set search_path = '' as $$
          and a.status not in ('cancelado', 'nao_compareceu'))
   )
 $$;
-
-revoke execute on all functions in schema laura from public;
-grant execute on function laura.eh_admin(), laura.papel_em(uuid), laura.gere(uuid), laura.eh_dono(uuid),
-  laura.meus_atendimentos(), laura.atualizar_status(uuid, laura.status_atendimento, text)
-  to authenticated;
-grant execute on all functions in schema laura to service_role;
 
 -- ───────────────────────── Gatilhos
 create function laura.tocar_atualizado_em() returns trigger
@@ -396,3 +413,11 @@ end $$;
 
 create trigger atendimentos_evento after insert or update on laura.atendimentos
   for each row execute function laura.registrar_evento();
+
+-- ───────────────────────── EXECUTE das funções
+-- Por último, depois de todas as funções e gatilhos criados.
+revoke execute on all functions in schema laura from public;
+grant execute on function laura.eh_admin(), laura.papel_em(uuid), laura.gere(uuid), laura.eh_dono(uuid),
+  laura.meus_atendimentos(), laura.atualizar_status(uuid, laura.status_atendimento, text)
+  to authenticated;
+grant execute on all functions in schema laura to service_role;
