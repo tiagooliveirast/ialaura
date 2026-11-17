@@ -104,3 +104,50 @@ export function mensalidade(tecnicosCobrados: number, combo = false): number {
   const extra = combo ? PRECOS.comboTecnicoAdicional : PRECOS.tecnicoAdicional
   return base + Math.max(0, tecnicosCobrados) * extra
 }
+
+/** "Sheik Manutenções" → "sheik-manutencoes". Vira o endereço do site da empresa. */
+export function slugificar(nome: string): string {
+  return nome
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40)
+}
+
+/** Data de hoje (AAAA-MM-DD) no fuso da empresa, não no do servidor. */
+export function hojeEm(fuso = 'America/Bahia'): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: fuso }).format(new Date())
+}
+
+/** "2026-11-17" → "ter., 17/11". */
+export function dataCurta(iso: string): string {
+  const [a, m, d] = iso.split('-').map(Number)
+  if (!a || !m || !d) return iso
+  return new Date(Date.UTC(a, m - 1, d)).toLocaleDateString('pt-BR', {
+    timeZone: 'UTC',
+    weekday: 'short',
+    day: '2-digit',
+    month: '2-digit',
+  })
+}
+
+/** Atendimento lançado pelo escritório no painel. */
+export const novoAtendimento = z.object({
+  nome: z.string().trim().min(2, 'Informe o nome do cliente.').max(120),
+  telefone,
+  endereco: z.string().trim().min(5, 'Informe rua e número.').max(240),
+  bairro: z.string().trim().max(80).optional(),
+  descricao: z.string().trim().max(1000).optional(),
+  data: dataISO,
+  periodo: z.enum(PERIODOS),
+})
+
+export const novaEmpresa = z.object({
+  nome: z.string().trim().min(2, 'Informe o nome da empresa.').max(80),
+  meuNome: z.string().trim().min(2, 'Informe o seu nome.').max(80),
+  telefone,
+  cidade: z.string().trim().min(2, 'Informe a cidade.').max(80),
+  uf: z.string().trim().length(2, 'UF com duas letras, por exemplo BA.').toUpperCase(),
+})
