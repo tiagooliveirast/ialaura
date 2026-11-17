@@ -1,0 +1,80 @@
+:root {
+  --marinho: #12233f;
+  --laranja: #e8630a;
+  --laranja-forte: #c9520a;
+  --papel: #f6f4ef;
+  --superficie: #ffffff;
+  --linha: #ddd8cd;
+  --texto: #1c2430;
+  --texto-2: #5b6472;
+  --certo: #1f7a4d;
+  --atencao: #b7791f;
+  --erro: #b3261e;
+
+  --raio: 6px;
+  --raio-painel: 10px;
+  --fonte: 'Public Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --fonte-titulo: 'Bricolage Grotesque', var(--fonte);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--papel);
+  color: var(--texto);
+  font-family: var(--fonte);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--fonte-titulo);
+  color: var(--marinho);
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+a {
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--laranja);
+  outline-offset: 2px;
+}
+
+.botao {
+  display: inline-block;
+  padding: 12px 18px;
+  border: 1px solid var(--laranja-forte);
+  border-radius: var(--raio);
+  background: var(--laranja);
+  color: #fff;
+  font: 600 1rem var(--fonte);
+  text-decoration: none;
+  transition: background 140ms;
+}
+
+.botao:hover {
+  background: var(--laranja-forte);
+}
+
+.painel {
+  background: var(--superficie);
+  border: 1px solid var(--linha);
+  border-radius: var(--raio-painel);
+}
+
+.numero {
+  font-variant-numeric: tabular-nums;
+}

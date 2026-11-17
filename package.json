@@ -1,0 +1,13 @@
+{
+  "name": "ialaura",
+  "private": true,
+  "packageManager": "pnpm@10.28.0",
+  "scripts": {
+    "dev": "pnpm --filter @ialaura/web dev",
+    "build": "pnpm --filter @ialaura/web build",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
