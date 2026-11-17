@@ -1,0 +1,526 @@
+/* Página inicial (vendas). Segue docs/DESIGN.md: fundo liso, borda no lugar de sombra, laranja só na ação. */
+
+.inicio {
+  --faixa: 1120px;
+}
+
+.faixa {
+  max-width: var(--faixa);
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.faixa-estreita {
+  max-width: 760px;
+}
+
+.inicio h2 {
+  font-size: clamp(1.625rem, 4vw, 2.25rem);
+  max-width: 24ch;
+}
+
+.inicio h3 {
+  font-size: 1.0625rem;
+  font-family: var(--fonte);
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.inicio p {
+  margin: 0;
+}
+
+/* ───────── Topo */
+.topo {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--papel);
+  border-bottom: 1px solid var(--linha);
+}
+
+.topo-dentro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 60px;
+}
+
+.logo {
+  font-family: var(--fonte-titulo);
+  font-weight: 800;
+  font-size: 1.125rem;
+  color: var(--marinho);
+}
+
+.topo nav {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.topo nav a {
+  text-decoration: none;
+  color: var(--texto-2);
+  font-weight: 500;
+}
+
+.topo nav a:hover {
+  color: var(--marinho);
+}
+
+.topo .topo-entrar {
+  color: var(--marinho);
+  font-weight: 600;
+  padding: 7px 14px;
+  border: 1px solid #b9b2a3;
+  border-radius: var(--raio);
+}
+
+/* ───────── Abertura */
+.abertura {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 56px;
+  align-items: center;
+  padding-top: 64px;
+  padding-bottom: 80px;
+}
+
+.sobretitulo {
+  font-weight: 600;
+  color: var(--laranja-forte);
+  font-size: 0.9375rem;
+}
+
+.abertura h1 {
+  margin-top: 14px;
+  font-size: clamp(2.125rem, 5.2vw, 3.5rem);
+  letter-spacing: -0.02em;
+}
+
+.abertura-texto {
+  margin-top: 20px !important;
+  font-size: 1.1875rem;
+  color: var(--texto-2);
+  max-width: 50ch;
+}
+
+.acoes {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-top: 32px;
+}
+
+.botao-grande {
+  padding: 15px 24px;
+  font-size: 1.0625rem;
+}
+
+.link-seta {
+  font-weight: 600;
+  color: var(--marinho);
+  text-underline-offset: 4px;
+}
+
+.link-seta::after {
+  content: ' →';
+}
+
+.letra-miuda {
+  margin-top: 16px !important;
+  font-size: 0.9375rem;
+  color: var(--texto-2);
+}
+
+/* ───────── Conversa de exemplo */
+.conversa {
+  margin: 0;
+  background: #e9e4d8;
+  border: 1px solid var(--linha);
+  border-radius: var(--raio-painel);
+  overflow: hidden;
+}
+
+.conversa figcaption {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 16px;
+  background: var(--marinho);
+  color: #fff;
+}
+
+.conversa figcaption span {
+  font-size: 0.8125rem;
+  opacity: 0.75;
+}
+
+.conversa ol {
+  list-style: none;
+  margin: 0;
+  padding: 16px;
+  display: grid;
+  gap: 8px;
+}
+
+.msg {
+  position: relative;
+  max-width: 85%;
+  padding: 8px 12px 20px;
+  border-radius: 8px;
+  font-size: 0.9375rem;
+  line-height: 1.4;
+}
+
+.msg time {
+  position: absolute;
+  right: 10px;
+  bottom: 4px;
+  font-size: 0.6875rem;
+  color: var(--texto-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.msg-cliente {
+  justify-self: start;
+  background: var(--superficie);
+}
+
+.msg-laura {
+  justify-self: end;
+  background: #dbe6f3;
+}
+
+.conversa-nota {
+  padding: 0 16px 14px;
+  font-size: 0.75rem;
+  color: var(--texto-2);
+}
+
+/* ───────── Blocos */
+.bloco {
+  padding: 80px 0;
+}
+
+.bloco-papel {
+  background: #efebe2;
+  border-top: 1px solid var(--linha);
+  border-bottom: 1px solid var(--linha);
+}
+
+.bloco-escuro {
+  background: var(--marinho);
+  color: #dfe5ee;
+}
+
+.bloco-escuro h2,
+.bloco-escuro h3 {
+  color: #fff;
+}
+
+/* Perdas */
+.perdas {
+  list-style: none;
+  margin: 40px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.perdas li {
+  padding: 24px 32px 24px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.perdas li:nth-child(odd) {
+  border-right: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.perdas li:nth-child(even) {
+  padding-left: 32px;
+}
+
+.perdas p {
+  margin-top: 8px !important;
+  color: #b9c3d2;
+}
+
+/* Passos */
+.passos {
+  list-style: none;
+  margin: 40px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 32px;
+}
+
+.passos li {
+  border-top: 2px solid var(--marinho);
+  padding-top: 16px;
+}
+
+.passo-numero {
+  display: block;
+  font-family: var(--fonte-titulo);
+  font-weight: 700;
+  font-size: 0.9375rem;
+  color: var(--laranja-forte);
+  margin-bottom: 10px;
+}
+
+.passos p {
+  margin-top: 6px !important;
+  color: var(--texto-2);
+}
+
+/* Recursos */
+.recursos {
+  margin: 40px 0 0;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  column-gap: 48px;
+}
+
+.recursos div {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 16px;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--linha);
+}
+
+.recursos dt {
+  font-weight: 700;
+  color: var(--marinho);
+}
+
+.recursos dd {
+  margin: 0;
+  color: var(--texto-2);
+}
+
+/* Autor */
+.autor {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.autor blockquote {
+  margin: 0;
+  max-width: 34ch;
+  font-family: var(--fonte-titulo);
+  font-size: clamp(1.375rem, 3.2vw, 2rem);
+  line-height: 1.3;
+  color: var(--marinho);
+  border-left: 3px solid var(--laranja);
+  padding-left: 24px;
+}
+
+.autor figcaption {
+  margin-top: 20px;
+  padding-left: 27px;
+  color: var(--texto-2);
+}
+
+/* Preço */
+.planos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 420px));
+  gap: 20px;
+  margin-top: 40px;
+}
+
+.plano {
+  display: flex;
+  flex-direction: column;
+  padding: 28px;
+  background: var(--superficie);
+  border: 1px solid var(--linha);
+  border-radius: var(--raio-painel);
+}
+
+.plano-destaque {
+  border: 2px solid var(--marinho);
+}
+
+.plano-preco {
+  margin-top: 12px !important;
+  font-family: var(--fonte-titulo);
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: var(--marinho);
+  line-height: 1.1;
+}
+
+.plano-preco span {
+  display: block;
+  margin-top: 4px;
+  font-family: var(--fonte);
+  font-size: 0.9375rem;
+  font-weight: 400;
+  color: var(--texto-2);
+}
+
+.plano-para {
+  margin-top: 12px !important;
+}
+
+.plano ul {
+  margin: 20px 0 24px;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 10px;
+  flex: 1;
+}
+
+.plano li {
+  padding-left: 22px;
+  position: relative;
+}
+
+.plano li::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 0.45em;
+  width: 10px;
+  height: 6px;
+  border-left: 2px solid var(--certo);
+  border-bottom: 2px solid var(--certo);
+  transform: rotate(-45deg);
+}
+
+.plano-exemplo {
+  padding-top: 16px;
+  border-top: 1px solid var(--linha);
+  color: var(--texto-2);
+}
+
+/* Dúvidas */
+.duvidas {
+  margin-top: 32px;
+  border-top: 1px solid var(--linha);
+}
+
+.duvidas details {
+  border-bottom: 1px solid var(--linha);
+}
+
+.duvidas summary {
+  cursor: pointer;
+  padding: 18px 32px 18px 0;
+  font-weight: 600;
+  color: var(--marinho);
+  list-style: none;
+  position: relative;
+}
+
+.duvidas summary::-webkit-details-marker {
+  display: none;
+}
+
+.duvidas summary::after {
+  content: '+';
+  position: absolute;
+  right: 4px;
+  top: 14px;
+  font-size: 1.375rem;
+  font-weight: 400;
+  color: var(--texto-2);
+}
+
+.duvidas details[open] summary::after {
+  content: '−';
+}
+
+.duvidas details p {
+  padding-bottom: 18px;
+  color: var(--texto-2);
+  max-width: 62ch;
+}
+
+/* Fechamento */
+.fechamento .faixa {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+
+.fechamento h2 {
+  max-width: 22ch;
+}
+
+/* Rodapé */
+.rodape {
+  padding: 28px 0;
+  font-size: 0.9375rem;
+  color: var(--texto-2);
+}
+
+.rodape-dentro {
+  display: flex;
+  justify-content: space-between;
+}
+
+/* ───────── Celular */
+@media (max-width: 900px) {
+  .abertura {
+    grid-template-columns: 1fr;
+    gap: 40px;
+    padding-top: 40px;
+    padding-bottom: 56px;
+  }
+
+  .passos {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .recursos {
+    grid-template-columns: 1fr;
+  }
+
+  .planos {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .so-largo {
+    display: none;
+  }
+
+  .bloco {
+    padding: 56px 0;
+  }
+
+  .perdas {
+    grid-template-columns: 1fr;
+  }
+
+  .perdas li,
+  .perdas li:nth-child(even) {
+    padding: 20px 0;
+    border-right: 0;
+  }
+
+  .passos {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .recursos div {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .msg {
+    max-width: 92%;
+  }
+}
