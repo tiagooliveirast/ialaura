@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-const PROTEGIDAS = ['/painel', '/comecar']
+const PROTEGIDAS = ['/painel', '/comecar', '/tecnico']
 
 // Renova a sessão a cada navegação e barra quem não está logado nas áreas internas.
 export async function middleware(req: NextRequest) {

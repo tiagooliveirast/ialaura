@@ -10,7 +10,10 @@ const entregas = [
 export default function Pagina() {
   return (
     <main style={{ maxWidth: 880, margin: '0 auto', padding: '56px 20px 80px' }}>
-      <p style={{ margin: 0, fontWeight: 700, color: 'var(--marinho)' }}>IA Laura</p>
+      <p style={{ margin: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+        <span style={{ fontWeight: 700, color: 'var(--marinho)' }}>IA Laura</span>
+        <a href="/entrar">Entrar</a>
+      </p>
 
       <h1 style={{ fontSize: 'clamp(2rem, 6vw, 3.25rem)', marginTop: 40, maxWidth: '18ch' }}>
         O cliente chama no WhatsApp. A Laura atende e marca a visita.

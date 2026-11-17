@@ -42,12 +42,18 @@ docs/           Este documento, design e roteiro
 - `main` → produção na Vercel. PR → preview. Um projeto Supabase de staging separado do de produção.
 - Segredos só nas variáveis da Vercel. Ver `.env.example`.
 
+## Já existe
+- Login e cadastro de empresa (`/entrar`, `/comecar`)
+- Painel de atendimentos por status (`/painel`)
+- Página pública de agendamento por empresa (`/a/[slug]`), com vagas conferidas no servidor
+- Agenda do técnico (`/tecnico`), ainda dentro do app web
+
 ## Ainda não existe (ordem sugerida)
-1. Login e criação de empresa (onboarding)
-2. Painel de atendimentos por status
+1. Convidar atendente e técnico, e atribuir técnico ao atendimento
+2. Configurações da empresa (valor da visita, vagas, bairros, conhecimento da IA)
 3. Worker da fila + IA com ferramentas
-4. Site público por empresa com agendamento
-5. App do técnico (PWA)
+4. Site institucional completo por empresa (hoje só o agendamento)
+5. App do técnico separado (PWA em apps/tecnico)
 6. Lembretes e pesquisa de satisfação
 7. Checkout e reconciliação Mercado Pago
 8. Tela de TV com indicadores

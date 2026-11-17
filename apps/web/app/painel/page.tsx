@@ -65,6 +65,12 @@ export default async function Painel({
           <p className="apoio">
             <span className="numero">{linhas.length}</span> na lista, <span className="numero">{deHoje}</span> para hoje.
           </p>
+          <p className="apoio">
+            Link para o cliente agendar sozinho:{' '}
+            <Link href={`/a/${empresa.slug}`} className="numero">
+              /a/{empresa.slug}
+            </Link>
+          </p>
         </div>
         <Link className="botao" href="/painel/novo">
           Marcar visita

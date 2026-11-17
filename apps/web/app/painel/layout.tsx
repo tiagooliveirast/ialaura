@@ -1,9 +1,11 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { exigirMembro } from '@/lib/sessao'
 import { sair } from '../entrar/acoes'
 
 export default async function PainelLayout({ children }: { children: React.ReactNode }) {
   const { membro, empresa } = await exigirMembro()
+  if (membro.papel === 'tecnico') redirect('/tecnico')
 
   return (
     <>
@@ -19,13 +21,7 @@ export default async function PainelLayout({ children }: { children: React.React
         </div>
       </header>
       <main className="largo">
-        {membro.papel === 'tecnico' ? (
-          <p className="aviso">
-            Sua conta é de técnico. A agenda do técnico fica em um aplicativo próprio, que ainda está em construção.
-          </p>
-        ) : (
-          children
-        )}
+        {children}
       </main>
     </>
   )
