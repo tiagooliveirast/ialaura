@@ -93,10 +93,10 @@ export function reais(centavos: number): string {
 
 // Preços vigentes, em centavos. O painel admin pode sobrepor por empresa.
 export const PRECOS = {
-  soloMensal: 19700,
-  tecnicoAdicional: 4900,
-  comboHeloMensal: 22700,
-  comboTecnicoAdicional: 6900,
+  soloMensal: 29700,
+  tecnicoAdicional: 9500,
+  comboHeloMensal: 34000,
+  comboTecnicoAdicional: 14200,
 } as const
 
 export function mensalidade(tecnicosCobrados: number, combo = false): number {
