@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { dataCurta, hojeEm, PERIODOS, reais, ROTULO_PERIODO, type Periodo } from '@ialaura/shared'
+import { proximosDias as diasDeAtendimento } from '@/lib/laura/agenda'
+import { lerConhecimento } from '@/lib/laura/conhecimento'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { pedirVisita } from './acoes'
 
@@ -13,22 +15,16 @@ type Empresa = {
   uf: string | null
   fuso: string
   valor_visita_centavos: number | null
+  conhecimento: unknown
 }
 
 async function buscar(slug: string) {
   const { data } = await supabaseAdmin()
     .from('empresas')
-    .select('id, nome, cidade, uf, fuso, valor_visita_centavos')
+    .select('id, nome, cidade, uf, fuso, valor_visita_centavos, conhecimento')
     .eq('slug', slug)
     .maybeSingle<Empresa>()
   return data
-}
-
-function proximosDias(hoje: string, quantos: number): string[] {
-  const [a, m, d] = hoje.split('-').map(Number)
-  return Array.from({ length: quantos }, (_, i) =>
-    new Date(Date.UTC(a!, m! - 1, d! + i)).toISOString().slice(0, 10),
-  )
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
@@ -54,7 +50,7 @@ export default async function Site({
   if (!empresa) notFound()
 
   const sb = supabaseAdmin()
-  const dias = proximosDias(hojeEm(empresa.fuso), 7)
+  const dias = diasDeAtendimento(hojeEm(empresa.fuso), 7, lerConhecimento(empresa.conhecimento))
   const combinacoes = dias.flatMap((data) => PERIODOS.map((periodo) => ({ data, periodo })))
   const vagas = await Promise.all(
     combinacoes.map(async ({ data, periodo }) => {

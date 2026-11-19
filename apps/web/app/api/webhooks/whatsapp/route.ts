@@ -1,8 +1,11 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
+import { after } from 'next/server'
+import { processarPendentes } from '@/lib/laura/processar'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+export const maxDuration = 60
 
 // A Meta chama este GET uma vez, quando você cadastra o webhook.
 export function GET(req: Request) {
@@ -68,6 +71,14 @@ export async function POST(req: Request) {
       // 500 faz a Meta reenviar depois; melhor que perder a mensagem.
       return new Response('Falha ao registrar', { status: 500 })
     }
+    // Responde 200 para a Meta já e processa logo em seguida, fora do tempo da requisição.
+    after(async () => {
+      try {
+        await processarPendentes()
+      } catch (e) {
+        console.error('webhook whatsapp: falha ao processar fila', e instanceof Error ? e.message : e)
+      }
+    })
   }
 
   return new Response('ok')

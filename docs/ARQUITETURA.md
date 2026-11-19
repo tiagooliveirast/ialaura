@@ -48,10 +48,18 @@ docs/           Este documento, design e roteiro
 - Página pública de agendamento por empresa (`/a/[slug]`), com vagas conferidas no servidor
 - Agenda do técnico (`/tecnico`), ainda dentro do app web
 
+- Configurações da empresa (`/painel/configuracoes`): o que a Laura sabe, dias de atendimento, número do WhatsApp
+- Equipe (`/painel/equipe`): acesso de técnico/atendente com senha provisória, quem vai a campo
+- Laura no WhatsApp: webhook grava na fila e processa logo depois (`after`); `/api/cron/processar` reprocessa falhas
+- Conversas (`/painel/conversas`): assumir, devolver para a Laura, responder pelo WhatsApp da empresa
+
+## Banco compartilhado com a Helô
+O schema `laura` vive no projeto Supabase da Helô (refriclube). Cadastro pela Laura leva `produto: 'laura'` nos metadados e os gatilhos da Helô não criam usuário nem teste para essa pessoa (migração 0003). O app lê `LAURA_SUPABASE_*` com prioridade sobre as variáveis do banco de teste.
+
 ## Ainda não existe (ordem sugerida)
-1. Convidar atendente e técnico, e atribuir técnico ao atendimento
-2. Configurações da empresa (valor da visita, vagas, bairros, conhecimento da IA)
-3. Worker da fila + IA com ferramentas
+1. Token de WhatsApp por empresa no Vault (hoje um token só, `WHATSAPP_ACCESS_TOKEN`)
+2. Lembretes, pesquisa de satisfação e modelos de mensagem aprovados pela Meta
+3. Reprocessamento agendado da fila (pg_cron chamando `/api/cron/processar`)
 4. Site institucional completo por empresa (hoje só o agendamento)
 5. App do técnico separado (PWA em apps/tecnico)
 6. Lembretes e pesquisa de satisfação

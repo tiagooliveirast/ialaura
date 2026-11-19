@@ -21,6 +21,7 @@ type Linha = {
   status: StatusAtendimento
   descricao: string | null
   cliente: { nome: string; telefone: string; bairro: string | null } | null
+  tecnico_id: string | null
   tecnico: { nome: string } | null
 }
 
@@ -44,7 +45,7 @@ export default async function Painel({
 
   let consulta = sb
     .from('atendimentos')
-    .select('id, data, periodo, status, descricao, cliente:clientes(nome, telefone, bairro), tecnico:membros(nome)')
+    .select('id, data, periodo, status, descricao, tecnico_id, cliente:clientes(nome, telefone, bairro), tecnico:membros(nome)')
     .order('data')
     .order('periodo')
     .limit(200)
@@ -53,7 +54,11 @@ export default async function Painel({
   else if (ver === 'finalizado') consulta = consulta.eq('status', 'finalizado').order('data', { ascending: false })
   else if (ver === 'cancelado') consulta = consulta.in('status', ['cancelado', 'nao_compareceu'])
 
-  const { data, error } = await consulta
+  const [{ data, error }, { data: equipe }] = await Promise.all([
+    consulta,
+    sb.from('membros').select('id, nome').eq('empresa_id', empresa.id).eq('ativo', true).eq('atende', true).order('nome'),
+  ])
+  const tecnicos = (equipe ?? []) as Array<{ id: string; nome: string }>
   const linhas = (data ?? []) as unknown as Linha[]
   const deHoje = linhas.filter((l) => l.data === hoje).length
 
@@ -103,8 +108,7 @@ export default async function Painel({
                 <th>Quando</th>
                 <th>Cliente</th>
                 <th>Serviço</th>
-                <th>Técnico</th>
-                <th>Status</th>
+                <th colSpan={2}>Técnico e status</th>
               </tr>
             </thead>
             <tbody>
@@ -123,10 +127,21 @@ export default async function Painel({
                     </span>
                   </td>
                   <td className="descricao">{l.descricao ?? <span className="fraco">Sem descrição</span>}</td>
-                  <td>{l.tecnico?.nome ?? <span className="fraco">A definir</span>}</td>
-                  <td>
+                  <td colSpan={2}>
                     <form action={mudarStatus} className="status">
                       <input type="hidden" name="id" value={l.id} />
+                      {tecnicos.length > 0 ? (
+                        <select name="tecnico" defaultValue={l.tecnico_id ?? ''} aria-label="Técnico">
+                          <option value="">Técnico a definir</option>
+                          {tecnicos.map((t) => (
+                            <option key={t.id} value={t.id}>
+                              {t.nome}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span className="fraco">{l.tecnico?.nome ?? 'Sem técnico'}</span>
+                      )}
                       <select name="status" defaultValue={l.status} aria-label={`Status de ${l.cliente?.nome ?? 'atendimento'}`}>
                         {STATUS_ATENDIMENTO.map((s) => (
                           <option key={s} value={s}>

@@ -441,3 +441,200 @@ a {
   flex: 1;
   padding: 11px 10px;
 }
+
+/* ───────── Menu do painel */
+.barra-dentro {
+  flex-wrap: wrap;
+}
+
+.barra-menu {
+  display: flex;
+  gap: 18px;
+  margin-right: auto;
+  margin-left: 24px;
+  overflow-x: auto;
+}
+
+.barra-menu a {
+  color: #fff;
+  opacity: 0.78;
+  text-decoration: none;
+  font-size: 0.9375rem;
+  white-space: nowrap;
+}
+
+.barra-menu a:hover {
+  opacity: 1;
+}
+
+@media (max-width: 720px) {
+  .barra-menu {
+    order: 3;
+    width: 100%;
+    margin: 8px 0 0;
+  }
+}
+
+/* ───────── Configurações e equipe */
+.largura-media {
+  max-width: 640px;
+}
+
+.secao {
+  margin-top: 16px;
+  font-size: 1.125rem;
+  padding-top: 16px;
+  border-top: 1px solid var(--linha);
+}
+
+.opcoes {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.opcoes legend {
+  font-weight: 600;
+  font-size: 0.9375rem;
+  margin-bottom: 6px;
+  padding: 0;
+}
+
+.opcoes input {
+  accent-color: var(--marinho);
+}
+
+.aviso-certo {
+  border-left-color: var(--certo);
+}
+
+.aviso p {
+  margin: 0;
+}
+
+.bloco-config {
+  margin-top: 32px;
+  padding: 20px;
+}
+
+.bloco-config .secao {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.bloco-config p {
+  margin: 8px 0 12px;
+}
+
+.detalhe {
+  margin-top: 16px;
+}
+
+.detalhe summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--marinho);
+}
+
+.tabela tr.inativo td {
+  color: var(--texto-2);
+}
+
+/* ───────── Conversas */
+.lista-conversas {
+  list-style: none;
+  margin: 20px 0 0;
+  padding: 0;
+}
+
+.lista-conversas li + li {
+  border-top: 1px solid var(--linha);
+}
+
+.lista-conversas a {
+  display: grid;
+  grid-template-columns: 1fr auto 56px;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 16px;
+  text-decoration: none;
+}
+
+.lista-conversas a:hover {
+  background: #faf8f4;
+}
+
+.lista-conversas a > :last-child {
+  text-align: right;
+}
+
+.etiqueta-atencao {
+  border-color: var(--atencao);
+  color: var(--atencao);
+}
+
+.conversa-tela {
+  max-width: 760px;
+}
+
+.acoes-conversa {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.mensagens {
+  list-style: none;
+  margin: 20px 0 0;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #e9e4d8;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.balao {
+  position: relative;
+  max-width: 82%;
+  padding: 6px 12px 20px;
+  border-radius: 8px;
+  background: var(--superficie);
+  white-space: pre-wrap;
+  font-size: 0.9375rem;
+}
+
+.balao-ia,
+.balao-humano {
+  align-self: flex-end;
+  background: #dbe6f3;
+}
+
+.balao-humano {
+  background: #f6e3d3;
+}
+
+.balao-autor {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--texto-2);
+}
+
+.balao time {
+  position: absolute;
+  right: 10px;
+  bottom: 3px;
+  font-size: 0.6875rem;
+  color: var(--texto-2);
+}
+
+.status select + select,
+.status select {
+  min-width: 150px;
+}

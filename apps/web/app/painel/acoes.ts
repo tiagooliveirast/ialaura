@@ -68,8 +68,12 @@ export async function mudarStatus(form: FormData) {
     redirect(comErro('/painel', 'Status inválido. Atualize a página e tente de novo.'))
   }
 
+  const tecnico = String(form.get('tecnico') ?? '')
+  const mudanca: { status: StatusAtendimento; tecnico_id?: string | null } = { status }
+  if (form.has('tecnico')) mudanca.tecnico_id = tecnico === '' ? null : tecnico
+
   // RLS garante que só altera atendimento da própria empresa.
-  const { error } = await sb.from('atendimentos').update({ status }).eq('id', id)
+  const { error } = await sb.from('atendimentos').update(mudanca).eq('id', id)
   if (error) redirect(comErro('/painel', `Não foi possível mudar o status: ${error.message}`))
   revalidatePath('/painel')
 }
