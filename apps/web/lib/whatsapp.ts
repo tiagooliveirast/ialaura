@@ -4,7 +4,7 @@
  * Quando houver várias empresas com números próprios, o token de cada uma vai para o Vault
  * (laura.whatsapp_contas.token_secret_id).
  */
-const VERSAO = process.env.WHATSAPP_GRAPH_VERSION ?? 'v21.0'
+const VERSAO = process.env.WHATSAPP_GRAPH_VERSION ?? 'v25.0'
 
 export class ErroWhatsapp extends Error {}
 
