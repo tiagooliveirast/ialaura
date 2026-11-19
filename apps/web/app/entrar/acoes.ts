@@ -13,6 +13,13 @@ function traduzir(mensagem: string): string {
   return `Não foi possível concluir: ${mensagem}`
 }
 
+/** Endereço público do site. O banco é compartilhado com a Helô, então o link do e-mail precisa dizer para onde voltar. */
+function siteUrl(): string {
+  if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, '')
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+  return 'http://localhost:3000'
+}
+
 function credenciais(form: FormData) {
   return {
     email: String(form.get('email') ?? '').trim().toLowerCase(),
@@ -37,7 +44,8 @@ export async function criarConta(form: FormData) {
 
   const sb = await supabaseServidor()
   // produto = 'laura' faz o banco (compartilhado com a Helô) não criar usuário nem teste da Helô.
-  const { data, error } = await sb.auth.signUp({ email, password, options: { data: { produto: 'laura' } } })
+  const { data, error } = await sb.auth.signUp({ email, password, options: { data: { produto: 'laura' }, emailRedirectTo: `${siteUrl()}/entrar` },
+  })
   if (error) redirect(comErro('/entrar', traduzir(error.message)))
   // Com confirmação de e-mail ligada no Supabase, a sessão só existe depois do clique no link.
   if (!data.session) redirect('/entrar?aviso=confirme')
