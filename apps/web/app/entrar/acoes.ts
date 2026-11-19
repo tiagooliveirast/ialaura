@@ -36,7 +36,8 @@ export async function criarConta(form: FormData) {
   if (password.length < 8) redirect(comErro('/entrar', 'A senha precisa ter pelo menos 8 caracteres.'))
 
   const sb = await supabaseServidor()
-  const { data, error } = await sb.auth.signUp({ email, password })
+  // produto = 'laura' faz o banco (compartilhado com a Helô) não criar usuário nem teste da Helô.
+  const { data, error } = await sb.auth.signUp({ email, password, options: { data: { produto: 'laura' } } })
   if (error) redirect(comErro('/entrar', traduzir(error.message)))
   // Com confirmação de e-mail ligada no Supabase, a sessão só existe depois do clique no link.
   if (!data.session) redirect('/entrar?aviso=confirme')
