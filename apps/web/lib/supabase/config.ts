@@ -1,3 +1,4 @@
+// Banco ativo: LAURA_SUPABASE_* (projeto refriclube, compartilhado com a Helô) desde 26/11/2026.
 /**
  * Qual banco a Laura usa.
  * LAURA_SUPABASE_* aponta para o banco compartilhado com a Helô e tem prioridade.
