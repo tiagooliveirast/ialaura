@@ -12,6 +12,20 @@ export const MODELOS = {
       'Olá, {{1}}! Passando para lembrar da sua visita técnica com a {{2}} amanhã {{3}}. Se precisar remarcar, é só responder esta mensagem.',
     exemplo: ['Maria', 'Sheik Manutenções', 'pela manhã'],
   },
+  confirmarVisita: {
+    nome: 'laura_confirmar_visita',
+    texto:
+      'Olá, {{1}}! Sua visita técnica com a {{2}} está marcada para amanhã, {{3}}. Podemos confirmar? Se não puder, é só tocar em "Preciso remarcar" que a gente acerta outro dia.',
+    exemplo: ['Maria', 'Sheik Manutenções', 'pela manhã'],
+    botoes: ['Confirmo', 'Preciso remarcar'],
+  },
+  cobrarConfirmacao: {
+    nome: 'laura_confirmacao_pendente',
+    texto:
+      'Olá, {{1}}! Ainda não recebemos a confirmação da sua visita de amanhã, {{2}}. O técnico pode ir? Se não for um bom dia, a gente remarca sem problema.',
+    exemplo: ['Maria', 'pela manhã'],
+    botoes: ['Pode vir', 'Preciso remarcar'],
+  },
   manutencaoTecnico: {
     nome: 'laura_manutencao_tecnico',
     texto: 'Manutenção programada em 7 dias: {{1}}, {{2}}, no endereço {{3}}. Confira peças e materiais antes do dia.',
@@ -28,6 +42,11 @@ export const MODELOS = {
     exemplo: ['Maria', 'Carlos', 'Sheik Manutenções'],
   },
 } as const
+
+/** Texto do modelo com os parâmetros preenchidos, para guardar na conversa o que o cliente recebeu. */
+export function textoDoModelo(texto: string, parametros: string[]): string {
+  return texto.replace(/\{\{(\d+)\}\}/g, (_, n: string) => parametros[Number(n) - 1] ?? '')
+}
 
 const VERSAO = process.env.WHATSAPP_GRAPH_VERSION ?? 'v25.0'
 
@@ -65,7 +84,12 @@ export async function cadastrarModelos(wabaId: string): Promise<SituacaoModelo[]
         name: m.nome,
         language: 'pt_BR',
         category: 'UTILITY',
-        components: [{ type: 'BODY', text: m.texto, example: { body_text: [m.exemplo] } }],
+        components: [
+          { type: 'BODY', text: m.texto, example: { body_text: [m.exemplo] } },
+          ...('botoes' in m
+            ? [{ type: 'BUTTONS', buttons: m.botoes.map((text) => ({ type: 'QUICK_REPLY', text })) }]
+            : []),
+        ],
       }),
     })
     if (!resp.ok) {

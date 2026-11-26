@@ -51,6 +51,19 @@ const FERRAMENTAS: Ferramenta[] = [
   {
     type: 'function',
     function: {
+      name: 'confirmar_visita',
+      description:
+        'Marca como confirmada uma visita da lista VISITAS DESTE CLIENTE. Use quando o cliente confirmar que vai estar em casa (por exemplo "Confirmo", "Pode vir", "ok, estarei aqui").',
+      parameters: {
+        type: 'object',
+        properties: { visita: { type: 'string', description: 'Código da visita, exatamente como na lista VISITAS DESTE CLIENTE' } },
+        required: ['visita'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
       name: 'remarcar_visita',
       description:
         'Muda a data de uma visita que o cliente já tem marcada (lista VISITAS DESTE CLIENTE). Só chame depois que o cliente escolheu um novo horário da lista de vagas.',
@@ -147,6 +160,8 @@ export function montarInstrucoes(
     SITUACOES_HUMANAS,
     '',
     'VISITA JÁ MARCADA',
+    '- Na véspera a empresa pede confirmação ao cliente. Se ele confirmar ("Confirmo", "Pode vir", "ok"), chame confirmar_visita e agradeça em uma frase curta.',
+    '- Se ele tocar em "Preciso remarcar", pergunte com gentileza qual dia fica melhor e ofereça os horários da lista de vagas.',
     '- Se o cliente não puder no dia, ofereça remarcar com os horários da lista de vagas e chame remarcar_visita.',
     '- Se ele não souber quando vai poder, chame desmarcar_visita com remarcar_depois = true e diga que fica à disposição: é só chamar quando quiser.',
     '- Nunca pressione o cliente para manter a visita.',
@@ -344,7 +359,7 @@ export async function atender(
     empresa,
     turnos,
     async (nome, args, vagas, visitas) => {
-      if (nome === 'remarcar_visita' || nome === 'desmarcar_visita') {
+      if (nome === 'remarcar_visita' || nome === 'desmarcar_visita' || nome === 'confirmar_visita') {
         return mexerNaVisita(sb, empresa.id, nome, args, vagas, visitas)
       }
       if (nome === 'passar_para_humano') {
@@ -380,9 +395,12 @@ export async function simular(
     empresa,
     turnos,
     async (nome, args, vagas, visitas) => {
-      if (nome === 'remarcar_visita' || nome === 'desmarcar_visita') {
+      if (nome === 'remarcar_visita' || nome === 'desmarcar_visita' || nome === 'confirmar_visita') {
         const v = visitas.find((x) => x.codigo === String(args.visita ?? ''))
         if (!v) return { resultado: 'Visita não encontrada na lista VISITAS DESTE CLIENTE.' }
+        if (nome === 'confirmar_visita') {
+          return { resultado: 'Visita confirmada. Agradeça ao cliente.', acao: `Confirmaria a visita de ${descreverVaga(v)}` }
+        }
         if (nome === 'desmarcar_visita') {
           return {
             resultado: 'Visita desmarcada. Confirme ao cliente com cuidado.',
@@ -429,7 +447,7 @@ export async function simular(
 async function mexerNaVisita(
   sb: SupabaseClient,
   empresaId: string,
-  nome: 'remarcar_visita' | 'desmarcar_visita',
+  nome: 'remarcar_visita' | 'desmarcar_visita' | 'confirmar_visita',
   args: Record<string, unknown>,
   vagas: Vaga[],
   visitas: VisitaCliente[],
@@ -447,6 +465,12 @@ async function mexerNaVisita(
     .in('status', ['agendado', 'confirmado', 'atrasado'])
     .maybeSingle<{ id: string; descricao: string | null }>()
   if (!alvo) return { resultado: 'Não achei essa visita. Passe para a equipe.' }
+
+  if (nome === 'confirmar_visita') {
+    const { error } = await sb.from('atendimentos').update({ status: 'confirmado' }).eq('id', alvo.id)
+    if (error) return { resultado: 'Erro ao confirmar. Passe para a equipe.' }
+    return { resultado: 'Visita confirmada. Agradeça ao cliente.', acao: 'confirmou' }
+  }
 
   if (nome === 'desmarcar_visita') {
     const motivo = String(args.motivo ?? '').slice(0, 200)

@@ -74,6 +74,7 @@ export default async function Inicio() {
   const mt = metricas.data as Metricas | null
   const dono = membro.papel === 'dono'
   const semTecnicoHoje = deHoje.filter((v) => !v.tecnico_id && ABERTOS.includes(v.status)).length
+  const semConfirmarHoje = deHoje.filter((v) => v.status === 'agendado').length
 
   const passos = [
     { feito: treino >= 60, titulo: `Treinar a ${nomeIA}`, detalhe: `${treino}% preenchido`, link: '/painel/laura' },
@@ -95,6 +96,13 @@ export default async function Inicio() {
     },
     (atrasados.count ?? 0) > 0 && {
       texto: `${atrasados.count} ${atrasados.count === 1 ? 'visita de dias anteriores' : 'visitas de dias anteriores'} sem baixa`,
+      link: '/painel/atendimentos',
+    },
+    semConfirmarHoje > 0 && {
+      texto:
+        semConfirmarHoje === 1
+          ? '1 visita de hoje não foi confirmada pelo cliente. Vale ligar antes de sair'
+          : `${semConfirmarHoje} visitas de hoje não foram confirmadas pelo cliente. Vale ligar antes de sair`,
       link: '/painel/atendimentos',
     },
     semTecnicoHoje > 0 && pessoas.length > 1 && { texto: `${semTecnicoHoje} visitas de hoje sem técnico`, link: '/painel/atendimentos' },

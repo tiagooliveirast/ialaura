@@ -2,14 +2,15 @@ import type { Periodo } from '@ialaura/shared'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { enviarModelo } from '@/lib/whatsapp'
 import { descreverVaga } from './agenda'
-import { MODELOS } from './modelos'
+import { MODELOS, textoDoModelo } from './modelos'
 
 type Lembrete = {
   id: string
   empresa_id: string
   atendimento_id: string
   destinatario: 'cliente' | 'tecnico'
-  motivo: 'vespera' | 'manutencao_programada' | 'pesquisa'
+  motivo: 'vespera' | 'manutencao_programada' | 'pesquisa' | 'cobrar_confirmacao'
+  enviar_em: string
   tentativas: number
   atendimento: {
     data: string
@@ -26,6 +27,34 @@ export function siteUrl(): string {
   return 'http://localhost:3000'
 }
 
+/** Horas entre o pedido de confirmação (10h da véspera) e a cobrança (17h). */
+const HORAS_ATE_COBRAR = 7
+
+type SupabaseClient = ReturnType<typeof supabaseAdmin>
+
+/**
+ * Guarda na conversa do cliente a mensagem automática que ele recebeu.
+ * Assim, quando ele responde "Confirmo" ou "Preciso remarcar", a Laura sabe do que se trata.
+ */
+async function registrarNaConversa(sb: SupabaseClient, empresaId: string, telefone: string, texto: string, waId: string | null) {
+  const agora = new Date().toISOString()
+  const { data: conversa } = await sb
+    .from('conversas')
+    .upsert({ empresa_id: empresaId, wa_telefone: telefone, ultima_msg_em: agora }, { onConflict: 'empresa_id,wa_telefone' })
+    .select('id')
+    .single<{ id: string }>()
+  if (!conversa) return
+  await sb.from('mensagens').insert({
+    empresa_id: empresaId,
+    conversa_id: conversa.id,
+    direcao: 'saida',
+    autor: 'ia',
+    wa_message_id: waId,
+    tipo: 'modelo',
+    conteudo: texto,
+  })
+}
+
 function primeiroNome(nome: string): string {
   return nome.trim().split(/\s+/)[0] ?? nome
 }
@@ -36,7 +65,7 @@ export async function enviarLembretesVencidos(limite = 200): Promise<{ enviados:
   const { data, error } = await sb
     .from('lembretes')
     .select(
-      'id, empresa_id, atendimento_id, destinatario, motivo, tentativas, atendimento:atendimentos(data, periodo, status, cliente:clientes(nome, telefone, endereco, bairro), tecnico:membros(nome, telefone))',
+      'id, empresa_id, atendimento_id, destinatario, motivo, enviar_em, tentativas, atendimento:atendimentos(data, periodo, status, cliente:clientes(nome, telefone, endereco, bairro), tecnico:membros(nome, telefone))',
     )
     .eq('status', 'pendente')
     .lte('enviar_em', new Date().toISOString())
@@ -80,6 +109,15 @@ export async function enviarLembretesVencidos(limite = 200): Promise<{ enviados:
       await cancelar(`Visita está como ${a.status}.`)
       continue
     }
+    if (l.motivo === 'cobrar_confirmacao' && a.status !== 'agendado') {
+      await cancelar('Cliente já confirmou.')
+      continue
+    }
+    if (l.motivo === 'cobrar_confirmacao' && Date.now() - new Date(l.enviar_em).getTime() > 3 * 3600 * 1000) {
+      // A rotina da tarde não rodou a tempo; perguntar "visita de amanhã" no dia da visita confundiria o cliente.
+      await cancelar('Passou da hora de cobrar a confirmação.')
+      continue
+    }
 
     const conta = await contaDa(l.empresa_id)
     if (!conta) {
@@ -89,12 +127,48 @@ export async function enviarLembretesVencidos(limite = 200): Promise<{ enviados:
 
     try {
       const quando = `${descreverVaga({ data: a.data, periodo: a.periodo })}`
-      if (l.motivo === 'vespera') {
-        await enviarModelo(conta.phone_number_id, a.cliente.telefone, MODELOS.lembreteVespera.nome, [
-          primeiroNome(a.cliente.nome),
-          conta.nome,
-          a.periodo === 'manha' ? 'pela manhã' : 'à tarde',
-        ])
+      const turno = a.periodo === 'manha' ? 'pela manhã' : 'à tarde'
+      if (l.motivo === 'vespera' && a.status === 'confirmado') {
+        // Já confirmada antes (por exemplo, na hora de marcar): só lembra, sem pedir de novo.
+        const p = [primeiroNome(a.cliente.nome), conta.nome, turno]
+        const waId = await enviarModelo(conta.phone_number_id, a.cliente.telefone, MODELOS.lembreteVespera.nome, p)
+        await registrarNaConversa(sb, l.empresa_id, a.cliente.telefone, textoDoModelo(MODELOS.lembreteVespera.texto, p), waId)
+      } else if (l.motivo === 'vespera') {
+        const p = [primeiroNome(a.cliente.nome), conta.nome, turno]
+        const waId = await enviarModelo(conta.phone_number_id, a.cliente.telefone, MODELOS.confirmarVisita.nome, p)
+        await registrarNaConversa(sb, l.empresa_id, a.cliente.telefone, textoDoModelo(MODELOS.confirmarVisita.texto, p), waId)
+        // Se não responder até a tarde, a Laura pergunta de novo (uma vez só).
+        await sb.from('lembretes').insert({
+          empresa_id: l.empresa_id,
+          atendimento_id: l.atendimento_id,
+          destinatario: 'cliente',
+          motivo: 'cobrar_confirmacao',
+          enviar_em: new Date(Date.now() + HORAS_ATE_COBRAR * 3600 * 1000).toISOString(),
+        })
+      } else if (l.motivo === 'cobrar_confirmacao') {
+        // Se o cliente escreveu qualquer coisa depois do pedido, a Laura já está conversando com ele: não insiste.
+        const pedidoEm = new Date(new Date(l.enviar_em).getTime() - HORAS_ATE_COBRAR * 3600 * 1000).toISOString()
+        const { data: conversa } = await sb
+          .from('conversas')
+          .select('id')
+          .eq('empresa_id', l.empresa_id)
+          .eq('wa_telefone', a.cliente.telefone)
+          .maybeSingle<{ id: string }>()
+        const { count } = conversa
+          ? await sb
+              .from('mensagens')
+              .select('id', { count: 'exact', head: true })
+              .eq('conversa_id', conversa.id)
+              .eq('autor', 'cliente')
+              .gte('criado_em', pedidoEm)
+          : { count: 0 }
+        if ((count ?? 0) > 0) {
+          await cancelar('Cliente respondeu; a conversa segue com a Laura.')
+          continue
+        }
+        const p = [primeiroNome(a.cliente.nome), turno]
+        const waId = await enviarModelo(conta.phone_number_id, a.cliente.telefone, MODELOS.cobrarConfirmacao.nome, p)
+        await registrarNaConversa(sb, l.empresa_id, a.cliente.telefone, textoDoModelo(MODELOS.cobrarConfirmacao.texto, p), waId)
       } else if (l.motivo === 'manutencao_programada') {
         const para = a.tecnico?.telefone ?? conta.telefone
         if (!para) {

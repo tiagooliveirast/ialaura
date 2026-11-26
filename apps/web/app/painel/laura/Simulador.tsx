@@ -14,6 +14,7 @@ const SUGESTOES = [
   'Quero falar com uma pessoa',
   'Não vou poder amanhã, meu pai faleceu ontem',
   'Tá saindo um cheiro de queimado da máquina de lavar',
+  'Preciso remarcar',
 ]
 
 function Ensinar({ situacao, respostaLaura }: { situacao: string; respostaLaura: string }) {
