@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import {
   dataCurta,
@@ -11,6 +12,7 @@ import {
 import { exigirMembro } from '@/lib/sessao'
 import { sair } from '../entrar/acoes'
 import { BotoesStatus } from './BotoesStatus'
+import { Finalizar } from './Finalizar'
 
 export const metadata: Metadata = { title: 'Minha agenda' }
 
@@ -33,13 +35,14 @@ const PROXIMOS: Partial<Record<StatusAtendimento, Array<[StatusAtendimento, stri
   confirmado: [['a_caminho', 'Estou indo'], ['atrasado', 'Vou atrasar']],
   atrasado: [['a_caminho', 'Estou indo']],
   a_caminho: [['em_andamento', 'Cheguei, iniciar'], ['atrasado', 'Vou atrasar']],
-  em_andamento: [['finalizado', 'Finalizar']],
 }
 
 export default async function Tecnico({ searchParams }: { searchParams: Promise<{ erro?: string }> }) {
   const { erro } = await searchParams
   const { sb, membro, empresa } = await exigirMembro()
-  if (membro.papel !== 'tecnico') redirect('/painel')
+  // Técnico, e também o dono ou atendente que vai a campo (marcado em Equipe).
+  if (membro.papel !== 'tecnico' && !membro.atende) redirect('/painel')
+  const doEscritorio = membro.papel !== 'tecnico'
 
   // Agenda dos próximos 7 dias, sem telefone do cliente: a regra está na função do banco.
   const { data, error } = await sb.rpc('meus_atendimentos')
@@ -50,7 +53,13 @@ export default async function Tecnico({ searchParams }: { searchParams: Promise<
     <>
       <header className="barra">
         <div className="barra-dentro">
-          <span className="barra-empresa">{empresa.nome}</span>
+          {doEscritorio ? (
+            <Link href="/painel" className="barra-empresa">
+              {empresa.nome} · voltar ao painel
+            </Link>
+          ) : (
+            <span className="barra-empresa">{empresa.nome}</span>
+          )}
           <form action={sair}>
             <span className="barra-usuario">{membro.nome}</span>
             <button className="link-botao">Sair</button>
@@ -83,6 +92,7 @@ export default async function Tecnico({ searchParams }: { searchParams: Promise<
                 {(v.servico || v.descricao) && <p className="visita-descricao">{[v.servico, v.descricao].filter(Boolean).join(': ')}</p>}
 
                 {PROXIMOS[v.status] && <BotoesStatus id={v.id} opcoes={PROXIMOS[v.status]!} />}
+                {v.status === 'em_andamento' && <Finalizar id={v.id} />}
               </li>
             ))}
           </ul>

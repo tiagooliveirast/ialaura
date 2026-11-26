@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import type { Papel } from '@ialaura/shared'
 import { supabaseServidor } from './supabase/server'
 
-export type Membro = { id: string; papel: Papel; nome: string; empresa_id: string }
+export type Membro = { id: string; papel: Papel; nome: string; empresa_id: string; atende: boolean }
 export type Empresa = { id: string; nome: string; slug: string; fuso: string }
 
 /** Garante usuário logado e com empresa. Sem login vai para /entrar; sem empresa, /comecar. */
@@ -15,7 +15,7 @@ export async function exigirMembro() {
 
   const { data: membro } = await sb
     .from('membros')
-    .select('id, papel, nome, empresa_id')
+    .select('id, papel, nome, empresa_id, atende')
     .eq('user_id', user.id)
     .eq('ativo', true)
     .limit(1)

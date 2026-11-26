@@ -1,4 +1,4 @@
-import type { Periodo } from '@ialaura/shared'
+import { reais, type Periodo } from '@ialaura/shared'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { enviarModelo } from '@/lib/whatsapp'
 import { descreverVaga } from './agenda'
@@ -9,13 +9,16 @@ type Lembrete = {
   empresa_id: string
   atendimento_id: string
   destinatario: 'cliente' | 'tecnico'
-  motivo: 'vespera' | 'manutencao_programada' | 'pesquisa' | 'cobrar_confirmacao'
+  motivo: 'vespera' | 'manutencao_programada' | 'pesquisa' | 'cobrar_confirmacao' | 'retomar_orcamento'
   enviar_em: string
   tentativas: number
   atendimento: {
     data: string
     periodo: Periodo
     status: string
+    cliente_id: string
+    orcamento_status: string | null
+    orcamento_centavos: number | null
     cliente: { nome: string; telefone: string; endereco: string | null; bairro: string | null } | null
     tecnico: { nome: string; telefone: string | null } | null
   } | null
@@ -65,7 +68,7 @@ export async function enviarLembretesVencidos(limite = 200): Promise<{ enviados:
   const { data, error } = await sb
     .from('lembretes')
     .select(
-      'id, empresa_id, atendimento_id, destinatario, motivo, enviar_em, tentativas, atendimento:atendimentos(data, periodo, status, cliente:clientes(nome, telefone, endereco, bairro), tecnico:membros(nome, telefone))',
+      'id, empresa_id, atendimento_id, destinatario, motivo, enviar_em, tentativas, atendimento:atendimentos(data, periodo, status, cliente_id, orcamento_status, orcamento_centavos, cliente:clientes(nome, telefone, endereco, bairro), tecnico:membros(nome, telefone))',
     )
     .eq('status', 'pendente')
     .lte('enviar_em', new Date().toISOString())
@@ -105,7 +108,22 @@ export async function enviarLembretesVencidos(limite = 200): Promise<{ enviados:
       await cancelar('Atendimento ou cliente não existe mais.')
       continue
     }
-    if (l.motivo !== 'pesquisa' && !['agendado', 'confirmado'].includes(a.status)) {
+    if (l.motivo === 'retomar_orcamento') {
+      if (!['pensando', 'recusado'].includes(a.orcamento_status ?? '') || a.orcamento_centavos == null) {
+        await cancelar('Orçamento já resolvido.')
+        continue
+      }
+      const { count } = await sb
+        .from('atendimentos')
+        .select('id', { count: 'exact', head: true })
+        .eq('empresa_id', l.empresa_id)
+        .eq('cliente_id', a.cliente_id)
+        .in('status', ['agendado', 'confirmado', 'a_caminho', 'atrasado', 'em_andamento'])
+      if ((count ?? 0) > 0) {
+        await cancelar('Cliente já tem outra visita marcada.')
+        continue
+      }
+    } else if (l.motivo !== 'pesquisa' && !['agendado', 'confirmado'].includes(a.status)) {
       await cancelar(`Visita está como ${a.status}.`)
       continue
     }
@@ -169,6 +187,10 @@ export async function enviarLembretesVencidos(limite = 200): Promise<{ enviados:
         const p = [primeiroNome(a.cliente.nome), turno]
         const waId = await enviarModelo(conta.phone_number_id, a.cliente.telefone, MODELOS.cobrarConfirmacao.nome, p)
         await registrarNaConversa(sb, l.empresa_id, a.cliente.telefone, textoDoModelo(MODELOS.cobrarConfirmacao.texto, p), waId)
+      } else if (l.motivo === 'retomar_orcamento') {
+        const p = [primeiroNome(a.cliente.nome), conta.nome, reais(a.orcamento_centavos ?? 0)]
+        const waId = await enviarModelo(conta.phone_number_id, a.cliente.telefone, MODELOS.retomarOrcamento.nome, p)
+        await registrarNaConversa(sb, l.empresa_id, a.cliente.telefone, textoDoModelo(MODELOS.retomarOrcamento.texto, p), waId)
       } else if (l.motivo === 'manutencao_programada') {
         const para = a.tecnico?.telefone ?? conta.telefone
         if (!para) {

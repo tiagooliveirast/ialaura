@@ -38,6 +38,13 @@ export const MODELOS = {
       'Olá, {{1}}! Obrigado por chamar a {{2}}. Pode avaliar o atendimento em menos de um minuto? {{3}} Sua opinião ajuda muito a gente.',
     exemplo: ['Maria', 'Sheik Manutenções', 'https://ialaura.vercel.app/p/exemplo'],
   },
+  retomarOrcamento: {
+    nome: 'laura_retomar_orcamento',
+    texto:
+      'Olá, {{1}}! Aqui é da {{2}}. Conseguiu pensar no orçamento de {{3}} para o conserto? Se quiser, já deixo o técnico agendado. Se ficou alguma dúvida, é só me falar.',
+    exemplo: ['Maria', 'Sheik Manutenções', 'R$ 350,00'],
+    botoes: ['Quero agendar', 'Tenho uma dúvida', 'Agora não'],
+  },
   resumoDoDia: {
     nome: 'laura_resumo_do_dia',
     texto:

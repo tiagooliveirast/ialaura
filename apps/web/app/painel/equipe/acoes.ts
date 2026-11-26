@@ -114,3 +114,41 @@ export async function alterarPessoa(form: FormData) {
   revalidatePath(VOLTA)
   revalidatePath('/painel')
 }
+
+const TIPOS_FOTO: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }
+
+/** Telefone e foto de uma pessoa da equipe. A foto vai para o cliente quando ele confirma a visita. */
+export async function atualizarPerfil(form: FormData) {
+  const { sb, membro } = await exigirMembro()
+  if (membro.papel !== 'dono') redirect(comErro(VOLTA, 'Só o dono pode alterar a equipe.'))
+  const id = String(form.get('id') ?? '')
+
+  // RLS confirma que a pessoa é da empresa do dono.
+  const { data: pessoa } = await sb.from('membros').select('id, empresa_id').eq('id', id).maybeSingle<{ id: string; empresa_id: string }>()
+  if (!pessoa) redirect(comErro(VOLTA, 'Pessoa não encontrada. Atualize a página.'))
+
+  const mudanca: Record<string, string | null> = {}
+  const telBruto = String(form.get('telefone') ?? '').trim()
+  if (telBruto) {
+    const tel = normalizarTelefone(telBruto)
+    if (!tel) redirect(comErro(VOLTA, 'Telefone inválido. Escreva com DDD, por exemplo 71 99999-0000.'))
+    mudanca.telefone = tel
+  }
+
+  const foto = form.get('foto')
+  if (foto instanceof File && foto.size > 0) {
+    const ext = TIPOS_FOTO[foto.type]
+    if (!ext) redirect(comErro(VOLTA, 'A foto precisa ser JPG, PNG ou WEBP.'))
+    if (foto.size > 2 * 1024 * 1024) redirect(comErro(VOLTA, 'Foto grande demais. Use uma de até 2 MB.'))
+    const caminho = `${pessoa.empresa_id}/${pessoa.id}-${Date.now()}.${ext}`
+    const armazenamento = supabaseAdmin().storage.from('laura-fotos')
+    const { error } = await armazenamento.upload(caminho, foto, { contentType: foto.type, upsert: false })
+    if (error) redirect(comErro(VOLTA, `Não foi possível enviar a foto: ${error.message}`))
+    mudanca.foto_url = armazenamento.getPublicUrl(caminho).data.publicUrl
+  }
+
+  if (!Object.keys(mudanca).length) redirect(comErro(VOLTA, 'Escolha uma foto ou escreva o telefone.'))
+  const { error } = await sb.from('membros').update(mudanca).eq('id', id)
+  if (error) redirect(comErro(VOLTA, `Não foi possível salvar: ${error.message}`))
+  revalidatePath(VOLTA)
+}

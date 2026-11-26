@@ -23,6 +23,7 @@ export default async function PainelLayout({ children }: { children: React.React
           <nav className="barra-menu" aria-label="Painel">
             <Link href="/painel">Início</Link>
             <Link href="/painel/atendimentos">Atendimentos</Link>
+            {membro.atende && <Link href="/tecnico">Minhas visitas</Link>}
             <Link href="/painel/conversas">Conversas</Link>
             <Link href="/painel/laura">Treinar a Laura</Link>
             {membro.papel === 'dono' && <Link href="/painel/equipe">Equipe</Link>}

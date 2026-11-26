@@ -42,7 +42,8 @@ export default async function Inicio() {
   const inicioMes = new Date(Date.UTC(a!, m! - 1, 1)).toISOString()
   const em7 = new Date(Date.UTC(a!, m! - 1, d! + 7)).toISOString().slice(0, 10)
 
-  const [visitas, conversasHumano, atrasados, dados, conta, servicos, areas, equipe, assinatura, metricas] = await Promise.all([
+  const desde60 = new Date(Date.UTC(a!, m! - 1, d! - 60)).toISOString().slice(0, 10)
+  const [visitas, conversasHumano, atrasados, dados, conta, servicos, areas, equipe, assinatura, metricas, orcamentos] = await Promise.all([
     sb
       .from('atendimentos')
       .select('id, data, periodo, status, descricao, tecnico_id, cliente:clientes(nome, bairro), tecnico:membros(nome)')
@@ -60,7 +61,17 @@ export default async function Inicio() {
     sb.from('membros').select('id, nome, atende').eq('empresa_id', empresa.id).eq('ativo', true),
     sb.from('assinaturas').select('status, isenta').eq('empresa_id', empresa.id).maybeSingle(),
     admin.rpc('metricas', { p_inicio: inicioMes, p_empresa: empresa.id }),
+    sb
+      .from('atendimentos')
+      .select('orcamento_status, orcamento_centavos, recuperado_em')
+      .eq('empresa_id', empresa.id)
+      .gte('data', desde60)
+      .in('orcamento_status', ['pensando', 'recusado', 'recuperado']),
   ])
+  const orc = (orcamentos.data ?? []) as Array<{ orcamento_status: string; orcamento_centavos: number | null; recuperado_em: string | null }>
+  const emAberto = orc.filter((o) => o.orcamento_status !== 'recuperado')
+  const recuperados = orc.filter((o) => o.orcamento_status === 'recuperado' && o.recuperado_em && o.recuperado_em >= inicioMes)
+  const soma = (l: typeof orc) => l.reduce((t, o) => t + (o.orcamento_centavos ?? 0), 0)
 
   const lista = (visitas.data ?? []) as unknown as Visita[]
   const deHoje = lista.filter((v) => v.data === hoje)
@@ -220,6 +231,26 @@ export default async function Inicio() {
           <p className="vazio-pequeno">Os números aparecem quando chegarem as primeiras conversas.</p>
         )}
       </section>
+
+      {orc.length > 0 && (
+        <section className="mes">
+          <div className="bloco-titulo">
+            <h2>Orçamentos que não fecharam na hora</h2>
+          </div>
+          <dl className="inds">
+            <Indicador
+              rotulo="Em aberto (últimos 60 dias)"
+              valor={emAberto.length}
+              nota={dono ? `${reais(soma(emAberto))} esperando o cliente` : 'A Laura retoma em 3 dias'}
+            />
+            <Indicador
+              rotulo={`Recuperados pela ${nomeIA} este mês`}
+              valor={recuperados.length}
+              nota={dono ? `${reais(soma(recuperados))} que voltaram` : undefined}
+            />
+          </dl>
+        </section>
+      )}
 
       <section className="painel link-site">
         <div>

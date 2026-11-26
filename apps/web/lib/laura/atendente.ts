@@ -17,7 +17,10 @@ export type EmpresaIA = {
   conhecimento: unknown
 }
 
+export type Imagem = { link: string; legenda: string }
+
 export type ResultadoAtendente = {
+  imagens: Imagem[]
   resposta: string | null
   passouParaHumano: boolean
   atendimentoCriado: string | null
@@ -166,6 +169,11 @@ export function montarInstrucoes(
     '- Se ele não souber quando vai poder, chame desmarcar_visita com remarcar_depois = true e diga que fica à disposição: é só chamar quando quiser.',
     '- Nunca pressione o cliente para manter a visita.',
     '',
+    'ORÇAMENTO QUE NÃO FECHOU',
+    '- Se o cliente responder à mensagem sobre o orçamento e quiser fazer o conserto ("Quero agendar"), marque a visita com marcar_visita; na descrição comece com "Conserto aprovado:" e o valor do orçamento.',
+    '- Se tiver dúvida, responda com as informações da empresa; dúvida técnica ou pedido de desconto vai para a equipe.',
+    '- Se disser "Agora não", agradeça, diga que fica à disposição e pergunte só uma vez, com leveza, se algo pesou na decisão. Não insista e não ofereça desconto.',
+    '',
     'QUANDO PASSAR PARA A EQUIPE (chame passar_para_humano)',
     '- O cliente pede para falar com uma pessoa.',
     ...transferir.map((t) => `- ${t}.`),
@@ -275,7 +283,7 @@ async function visitasDoCliente(sb: SupabaseClient, empresaId: string, telefone:
   return (data ?? []).map((a) => ({ id: a.id, codigo: a.id.slice(0, 8), data: a.data, periodo: a.periodo as Periodo, descricao: a.descricao }))
 }
 
-type Executor = (nome: string, args: Record<string, unknown>, vagas: Vaga[], visitas: VisitaCliente[]) => Promise<{ resultado: string; acao?: string; atendimentoId?: string; humano?: boolean }>
+type Executor = (nome: string, args: Record<string, unknown>, vagas: Vaga[], visitas: VisitaCliente[]) => Promise<{ resultado: string; acao?: string; atendimentoId?: string; humano?: boolean; imagem?: Imagem }>
 
 /** Laço da conversa com o modelo: até 3 rodadas de ferramenta. */
 async function conversar(
@@ -296,6 +304,7 @@ async function conversar(
   let passouParaHumano = false
   let atendimentoCriado: string | null = null
   const acoes: string[] = []
+  const imagens: Imagem[] = []
 
   for (let rodada = 0; rodada < 3; rodada++) {
     const r = await perguntar(mensagens, FERRAMENTAS)
@@ -310,7 +319,7 @@ async function conversar(
 
     const chamadas = r.mensagem.tool_calls ?? []
     if (chamadas.length === 0) {
-      return { resposta: r.mensagem.content?.trim() || null, passouParaHumano, atendimentoCriado, acoes }
+      return { resposta: r.mensagem.content?.trim() || null, passouParaHumano, atendimentoCriado, acoes, imagens }
     }
     mensagens.push({ role: 'assistant', content: r.mensagem.content, tool_calls: chamadas })
 
@@ -325,6 +334,7 @@ async function conversar(
       if (e.humano) passouParaHumano = true
       if (e.atendimentoId) atendimentoCriado = e.atendimentoId
       if (e.acao) acoes.push(e.acao)
+      if (e.imagem) imagens.push(e.imagem)
       mensagens.push({ role: 'tool', tool_call_id: chamada.id, content: e.resultado })
     }
   }
@@ -334,6 +344,7 @@ async function conversar(
     passouParaHumano,
     atendimentoCriado,
     acoes,
+    imagens,
   }
 }
 
@@ -454,7 +465,7 @@ async function mexerNaVisita(
   args: Record<string, unknown>,
   vagas: Vaga[],
   visitas: VisitaCliente[],
-): Promise<{ resultado: string; acao?: string }> {
+): Promise<{ resultado: string; acao?: string; imagem?: Imagem }> {
   const codigo = typeof args.visita === 'string' ? args.visita.trim() : ''
   const escolhida = visitas.find((v) => v.codigo === codigo)
   if (!escolhida) {
@@ -472,6 +483,21 @@ async function mexerNaVisita(
   if (nome === 'confirmar_visita') {
     const { error } = await sb.from('atendimentos').update({ status: 'confirmado' }).eq('id', alvo.id)
     if (error) return { resultado: 'Erro ao confirmar. Passe para a equipe.' }
+    // Foto de quem vai: o cliente vê o rosto de quem vai entrar na casa dele.
+    const { data: quem } = await sb
+      .from('atendimentos')
+      .select('tecnico:membros(nome, foto_url)')
+      .eq('id', alvo.id)
+      .single()
+    const tecnico = (quem as unknown as { tecnico: { nome: string; foto_url: string | null } | null } | null)?.tecnico
+    if (tecnico?.foto_url) {
+      const nome = tecnico.nome.trim().split(/\s+/)[0]
+      return {
+        resultado: `Visita confirmada. A foto do técnico ${nome} já vai para o cliente; agradeça e diga que é ele quem vai.`,
+        acao: 'confirmou',
+        imagem: { link: tecnico.foto_url, legenda: `Este é o ${nome}, da nossa equipe. É ele quem vai até você.` },
+      }
+    }
     return { resultado: 'Visita confirmada. Agradeça ao cliente.', acao: 'confirmou' }
   }
 
@@ -540,6 +566,13 @@ async function marcarVisita(
   if (error || !atendimento) return { ok: false, mensagem: 'Erro ao marcar. Passe para humano.' }
 
   await sb.from('conversas').update({ cliente_id: cliente.id }).eq('id', conversa.id)
+  // Cliente com orçamento em aberto marcou de novo: conta como orçamento recuperado pela Laura.
+  await sb
+    .from('atendimentos')
+    .update({ orcamento_status: 'recuperado', recuperado_em: new Date().toISOString() })
+    .eq('empresa_id', empresaId)
+    .eq('cliente_id', cliente.id)
+    .in('orcamento_status', ['pensando', 'recusado'])
   return {
     ok: true,
     atendimentoId: atendimento.id,

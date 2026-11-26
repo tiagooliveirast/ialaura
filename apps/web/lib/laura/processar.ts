@@ -1,5 +1,5 @@
 import { supabaseAdmin } from '@/lib/supabase/admin'
-import { enviarTexto } from '@/lib/whatsapp'
+import { enviarImagem, enviarTexto } from '@/lib/whatsapp'
 import { empresaLiberada } from '@/lib/cobranca'
 import { atender } from './atendente'
 import { transcreverAudio } from './audio'
@@ -145,11 +145,29 @@ async function processarEvento(ev: Evento) {
   if (conversa.estado !== 'ia') return
 
   let resposta: string | null
+  let imagens: Array<{ link: string; legenda: string }> = []
   if (!texto) {
     resposta = audioFalhou ? AUDIO_FALHOU : SEM_TEXTO
   } else {
     const r = await atender(sb, empresa, conversa)
     resposta = r.resposta
+    imagens = r.imagens
+  }
+  for (const img of imagens) {
+    try {
+      const idImg = await enviarImagem(phone_number_id, mensagem.from, img.link, img.legenda)
+      await sb.from('mensagens').insert({
+        empresa_id: empresa.id,
+        conversa_id: conversa.id,
+        direcao: 'saida',
+        autor: 'ia',
+        wa_message_id: idImg,
+        tipo: 'image',
+        conteudo: img.legenda,
+      })
+    } catch (e) {
+      console.error('laura: falha ao enviar foto', e instanceof Error ? e.message : e)
+    }
   }
   if (!resposta) return
 
