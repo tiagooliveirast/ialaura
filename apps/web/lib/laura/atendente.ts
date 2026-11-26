@@ -208,6 +208,7 @@ export function montarInstrucoes(
     '',
     'CONDIÇÕES',
     linha('Formas de pagamento', c.pagamento),
+    c.pix_chave ? `- Chave Pix da empresa (pode passar quando o cliente pedir para pagar): ${c.pix_chave}${c.pix_nome ? `, em nome de ${c.pix_nome}` : ''}` : '',
     linha('Garantia', c.garantia),
     linha('Horário de atendimento', c.horario),
     linha('Se o cliente chamar fora do horário', c.fora_horario),

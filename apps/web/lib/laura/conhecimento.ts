@@ -43,6 +43,8 @@ export type Conhecimento = {
   transferir_extra?: string
   proibido?: string
   observacoes?: string
+  pix_chave?: string
+  pix_nome?: string
 }
 
 export const PERGUNTAR_ANTES = [
@@ -117,6 +119,8 @@ export function lerConhecimento(valor: unknown): Conhecimento {
     transferir_extra: texto(v.transferir_extra, 1000),
     proibido: texto(v.proibido, 1000),
     observacoes: texto(v.observacoes, 3000),
+    pix_chave: texto(v.pix_chave, 120),
+    pix_nome: texto(v.pix_nome, 120),
   }
 }
 

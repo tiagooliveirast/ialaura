@@ -15,7 +15,7 @@ const OPCOES: Array<[Resultado, string]> = [
  * Finalizar a visita dizendo como ficou o orçamento.
  * Se o cliente não fechou, a Laura retoma a conversa com ele em 3 dias.
  */
-export function Finalizar({ id }: { id: string }) {
+export function Finalizar({ id, temPix }: { id: string; temPix: boolean }) {
   const [resultado, setResultado] = useState<Resultado | null>(null)
   const [enviando, setEnviando] = useState(false)
 
@@ -51,6 +51,11 @@ export function Finalizar({ id }: { id: string }) {
             <span>{resultado === 'aprovado' ? 'Valor cobrado (opcional)' : 'Valor do orçamento'}</span>
             <input name="valor" inputMode="decimal" maxLength={10} required={resultado !== 'aprovado'} />
           </label>
+          {resultado === 'aprovado' && temPix && (
+            <label className="marcar">
+              <input type="checkbox" name="pix" defaultChecked /> Mandar a cobrança por Pix no WhatsApp do cliente (se tiver valor)
+            </label>
+          )}
           {resultado !== 'aprovado' && (
             <>
               <label className="campo">

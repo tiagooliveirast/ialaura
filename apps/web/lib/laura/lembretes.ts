@@ -261,3 +261,31 @@ export async function avisarTecnicoACaminho(atendimentoId: string): Promise<void
     empresa.nome,
   ])
 }
+
+/** Cobrança por Pix logo depois do serviço. Chamada pelo app do técnico, depois que o banco conferiu a permissão. */
+export async function enviarCobrancaPix(atendimentoId: string): Promise<void> {
+  const sb = supabaseAdmin()
+  const { data } = await sb
+    .from('atendimentos')
+    .select('empresa_id, valor_centavos, cliente:clientes(nome, telefone)')
+    .eq('id', atendimentoId)
+    .single()
+  const a = data as unknown as {
+    empresa_id: string
+    valor_centavos: number | null
+    cliente: { nome: string; telefone: string } | null
+  } | null
+  if (!a?.cliente || !a.valor_centavos) return
+
+  const [{ data: conta }, { data: empresa }] = await Promise.all([
+    sb.from('whatsapp_contas').select('phone_number_id, status').eq('empresa_id', a.empresa_id).maybeSingle(),
+    sb.from('empresas').select('nome, conhecimento').eq('id', a.empresa_id).single(),
+  ])
+  if (!conta || conta.status !== 'ativa' || !empresa) return
+  const c = (empresa.conhecimento ?? {}) as { pix_chave?: string; pix_nome?: string }
+  if (!c.pix_chave) return
+
+  const p = [primeiroNome(a.cliente.nome), empresa.nome, reais(a.valor_centavos), c.pix_chave, c.pix_nome || empresa.nome]
+  const waId = await enviarModelo(conta.phone_number_id, a.cliente.telefone, MODELOS.cobrancaPix.nome, p)
+  await registrarNaConversa(sb, a.empresa_id, a.cliente.telefone, textoDoModelo(MODELOS.cobrancaPix.texto, p), waId)
+}

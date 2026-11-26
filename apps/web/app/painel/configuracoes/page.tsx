@@ -104,6 +104,21 @@ export default async function Configuracoes({
           em reais no painel de indicadores
         </label>
 
+        <h2 className="secao">Pix para receber dos clientes</h2>
+        <label className="campo">
+          <span>Chave Pix</span>
+          <input name="pix_chave" maxLength={120} defaultValue={c.pix_chave ?? ''} />
+          <small>
+            Quando o técnico finaliza a visita com o valor, a cobrança com esta chave pode ir direto para o WhatsApp do cliente. A
+            Laura também passa a chave quando o cliente pergunta como pagar.
+          </small>
+        </label>
+        <label className="campo">
+          <span>Nome que aparece no Pix</span>
+          <input name="pix_nome" maxLength={120} defaultValue={c.pix_nome ?? ''} />
+          <small>Para o cliente conferir antes de pagar.</small>
+        </label>
+
         <h2 className="secao">Resumo do dia no seu WhatsApp</h2>
         <label className="marcar">
           <input type="checkbox" name="resumo_diario" defaultChecked={empresa?.resumo_diario !== false} /> Receber às 19h o que a

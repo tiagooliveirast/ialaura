@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { after } from 'next/server'
 import { STATUS_DO_TECNICO } from '@ialaura/shared'
-import { avisarTecnicoACaminho } from '@/lib/laura/lembretes'
+import { avisarTecnicoACaminho, enviarCobrancaPix } from '@/lib/laura/lembretes'
 import { comErro } from '@/lib/sessao'
 import { supabaseServidor } from '@/lib/supabase/server'
 
@@ -75,5 +75,8 @@ export async function finalizarVisita(form: FormData) {
     p_motivo: String(form.get('motivo') ?? '').slice(0, 300) || null,
   })
   if (e2) redirect(comErro('/tecnico', `A visita foi finalizada, mas o orçamento não foi salvo: ${e2.message}`))
+  if (resultado === 'aprovado' && valor != null && form.get('pix') === 'on') {
+    after(() => enviarCobrancaPix(id).catch((e) => console.error('cobrança pix:', e instanceof Error ? e.message : e)))
+  }
   revalidatePath('/tecnico')
 }

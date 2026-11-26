@@ -23,3 +23,12 @@ export async function alternarIsencao(form: FormData) {
   await supabaseAdmin().from('assinaturas').update({ isenta }).eq('empresa_id', empresaId)
   revalidatePath('/admin')
 }
+
+/** Marca que quem indicou esta empresa já ganhou o mês grátis (dado manualmente no Mercado Pago ou com isenção). */
+export async function marcarIndicacaoRecompensada(form: FormData) {
+  await exigirAdmin()
+  const empresaId = String(form.get('empresa') ?? '')
+  if (!empresaId) return
+  await supabaseAdmin().from('empresas').update({ indicacao_recompensada_em: new Date().toISOString() }).eq('id', empresaId)
+  revalidatePath('/admin')
+}

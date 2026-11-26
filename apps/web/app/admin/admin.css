@@ -92,3 +92,49 @@
   color: var(--atencao);
   font-weight: 600;
 }
+
+/* Saúde dos clientes */
+.saude {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.saude-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid var(--linha);
+  border-left-width: 4px;
+  border-radius: var(--raio);
+  background: var(--superficie);
+}
+
+.saude-item p {
+  margin: 4px 0 0;
+}
+
+.saude-risco {
+  border-left-color: var(--erro);
+}
+
+.saude-atencao {
+  border-left-color: var(--atencao);
+}
+
+.saude-acoes {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  white-space: nowrap;
+}
+
+.saude-nota {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--marinho);
+}

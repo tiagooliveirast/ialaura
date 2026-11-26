@@ -1254,3 +1254,21 @@ a {
   margin-top: 8px;
   min-width: 240px;
 }
+
+/* Indique e ganhe */
+.indique {
+  margin-top: 28px;
+  padding: 20px;
+}
+
+.indique h2 {
+  margin-top: 0;
+}
+
+.indique-link {
+  padding: 10px 12px;
+  border: 1px dashed var(--linha);
+  border-radius: var(--raio);
+  background: var(--papel);
+  word-break: break-all;
+}

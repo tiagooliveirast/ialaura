@@ -45,6 +45,12 @@ export const MODELOS = {
     exemplo: ['Maria', 'Sheik Manutenções', 'R$ 350,00'],
     botoes: ['Quero agendar', 'Tenho uma dúvida', 'Agora não'],
   },
+  cobrancaPix: {
+    nome: 'laura_cobranca_pix',
+    texto:
+      'Olá, {{1}}! Obrigado por escolher a {{2}}. O valor do serviço ficou em {{3}}. Para pagar por Pix, a chave é {{4}}, em nome de {{5}}. Qualquer dúvida, é só responder esta mensagem.',
+    exemplo: ['Maria', 'Sheik Manutenções', 'R$ 350,00', '71999990000', 'Tiago Oliveira'],
+  },
   resumoDoDia: {
     nome: 'laura_resumo_do_dia',
     texto:

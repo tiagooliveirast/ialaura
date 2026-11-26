@@ -45,7 +45,11 @@ export default async function Tecnico({ searchParams }: { searchParams: Promise<
   const doEscritorio = membro.papel !== 'tecnico'
 
   // Agenda dos próximos 7 dias, sem telefone do cliente: a regra está na função do banco.
-  const { data, error } = await sb.rpc('meus_atendimentos')
+  const [{ data, error }, { data: dadosEmpresa }] = await Promise.all([
+    sb.rpc('meus_atendimentos'),
+    sb.from('empresas').select('conhecimento').eq('id', empresa.id).maybeSingle(),
+  ])
+  const temPix = !!(dadosEmpresa?.conhecimento as { pix_chave?: string } | null)?.pix_chave
   const visitas = (data ?? []) as Visita[]
   const hoje = hojeEm(empresa.fuso)
 
@@ -92,7 +96,7 @@ export default async function Tecnico({ searchParams }: { searchParams: Promise<
                 {(v.servico || v.descricao) && <p className="visita-descricao">{[v.servico, v.descricao].filter(Boolean).join(': ')}</p>}
 
                 {PROXIMOS[v.status] && <BotoesStatus id={v.id} opcoes={PROXIMOS[v.status]!} />}
-                {v.status === 'em_andamento' && <Finalizar id={v.id} />}
+                {v.status === 'em_andamento' && <Finalizar id={v.id} temPix={temPix} />}
               </li>
             ))}
           </ul>

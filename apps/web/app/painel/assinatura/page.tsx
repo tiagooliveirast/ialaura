@@ -2,6 +2,8 @@ import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { mensalidade, PRECOS, reais } from '@ialaura/shared'
 import { cobrancaAtiva, contarTecnicosAdicionais, sincronizar } from '@/lib/cobranca'
+import { supabaseAdmin } from '@/lib/supabase/admin'
+import { siteUrl } from '@/lib/laura/lembretes'
 import { exigirMembro } from '@/lib/sessao'
 import { assinar } from './acoes'
 
@@ -50,6 +52,21 @@ export default async function PaginaAssinatura({
     }
   }
   const adicionais = await contarTecnicosAdicionais(membro.empresa_id)
+  const admin = supabaseAdmin()
+  const [{ data: minha }, { data: indicadas }] = await Promise.all([
+    admin.from('empresas').select('slug').eq('id', membro.empresa_id).single<{ slug: string }>(),
+    admin
+      .from('empresas')
+      .select('id, assinaturas(status, isenta), indicacao_recompensada_em')
+      .eq('indicado_por', membro.empresa_id),
+  ])
+  const ind = (indicadas ?? []) as unknown as Array<{
+    id: string
+    assinaturas: { status: string; isenta: boolean } | null
+    indicacao_recompensada_em: string | null
+  }>
+  const indPagando = ind.filter((i) => i.assinaturas?.status === 'ativa' && !i.assinaturas.isenta).length
+  const linkIndicacao = minha ? `${siteUrl()}/i/${minha.slug}` : null
   const valor = mensalidade(Math.max(adicionais, a?.tecnicos_cobrados ?? 0))
 
   return (
@@ -106,6 +123,32 @@ export default async function PaginaAssinatura({
       )}
       {!cobrancaAtiva() && (
         <p className="aviso">Período de implantação: o sistema está liberado mesmo sem assinatura.</p>
+      )}
+
+      {linkIndicacao && (
+        <section className="painel indique">
+          <h2>Indique e ganhe um mês grátis</h2>
+          <p>
+            Conhece outro técnico ou assistência que perde cliente por demorar a responder no WhatsApp? Mande o seu link. Quando
+            ele assinar, você ganha <strong>um mês da Laura sem pagar</strong>, e não tem limite de indicações.
+          </p>
+          <p className="indique-link numero">{linkIndicacao}</p>
+          <a
+            className="botao"
+            href={`https://wa.me/?text=${encodeURIComponent(
+              `Estou usando a IA Laura na minha assistência: ela responde os clientes no WhatsApp na hora, marca as visitas e confirma na véspera. Vale a pena conhecer: ${linkIndicacao}`,
+            )}`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Mandar pelo WhatsApp
+          </a>
+          <p className="fraco" style={{ marginTop: 10 }}>
+            {ind.length === 0
+              ? 'Nenhuma indicação ainda.'
+              : `${ind.length} ${ind.length === 1 ? 'empresa entrou' : 'empresas entraram'} pelo seu link, ${indPagando} já ${indPagando === 1 ? 'assinou' : 'assinaram'}.`}
+          </p>
+        </section>
       )}
     </div>
   )

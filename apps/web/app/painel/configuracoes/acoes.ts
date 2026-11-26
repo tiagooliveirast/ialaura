@@ -38,6 +38,8 @@ export async function salvarConfiguracoes(form: FormData) {
     ...((atual?.conhecimento as Record<string, unknown>) ?? {}),
     sabado: form.get('sabado') === 'on',
     domingo: form.get('domingo') === 'on',
+    pix_chave: texto(form, 'pix_chave', 120),
+    pix_nome: texto(form, 'pix_nome', 120),
   }
 
   const { error } = await sb
