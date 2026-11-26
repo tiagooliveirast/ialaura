@@ -69,12 +69,12 @@ begin
   return new;
 end $$;
 
-drop trigger if exists atendimentos_lembretes on laura.atendimentos;
 create trigger atendimentos_lembretes after insert or update on laura.atendimentos
   for each row execute function laura.programar_lembretes();
 
 -- Técnico informa o andamento, agora com a posição do celular (opcional).
-drop function if exists laura.atualizar_status(uuid, laura.status_atendimento, text);
+-- Versão nova ao lado da antiga (sem DROP); o app sempre envia os 6 parâmetros, então chama esta.
+-- A versão de 3 parâmetros perde a permissão de execução e fica sem uso.
 create function laura.atualizar_status(
   p_atendimento uuid,
   p_status laura.status_atendimento,
@@ -142,6 +142,7 @@ begin
       from laura.empresas e where e.id = v_empresa;
 end $$;
 
+revoke execute on function laura.atualizar_status(uuid, laura.status_atendimento, text) from public, authenticated;
 revoke execute on function laura.dez_horas(date, text) from public;
 revoke execute on function laura.programar_lembretes() from public;
 revoke execute on function laura.atualizar_status(uuid, laura.status_atendimento, text, double precision, double precision, real) from public;
