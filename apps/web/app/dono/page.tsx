@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { hojeEm, PRECOS, reais, ROTULO_STATUS, type StatusAtendimento } from '@ialaura/shared'
 import { empresaLiberada } from '@/lib/cobranca'
-import { dinheiroDoMes, temHelo } from '@/lib/dono'
+import { dinheiroDoMes, resumoHelo, temHelo } from '@/lib/dono'
 import { inicioDoDia } from '@/lib/laura/resumo'
 import type { Metricas } from '@/lib/metricas'
 import { exigirMembro } from '@/lib/sessao'
@@ -29,8 +29,8 @@ export default async function Dono({ searchParams }: { searchParams: Promise<{ t
   const { user, membro, empresa } = await exigirMembro()
   if (membro.papel !== 'dono') redirect('/painel')
 
-  const [laura, helo] = await Promise.all([empresaLiberada(empresa.id), temHelo(user.id)])
-  if (!laura || !helo) {
+  const [laura, comHelo] = await Promise.all([empresaLiberada(empresa.id), temHelo(user.id)])
+  if (!laura || !comHelo) {
     return (
       <main className="estreito dono-bloqueado">
         <p>
@@ -49,9 +49,9 @@ export default async function Dono({ searchParams }: { searchParams: Promise<{ t
         </p>
         <ul className="dono-falta">
           <li className={laura ? 'ok' : undefined}>IA Laura {laura ? 'ativa' : 'sem assinatura ativa'}</li>
-          <li className={helo ? 'ok' : undefined}>Helô {helo ? 'ativa' : 'não encontrada nesta conta'}</li>
+          <li className={comHelo ? 'ok' : undefined}>Helô {comHelo ? 'ativa' : 'não encontrada nesta conta'}</li>
         </ul>
-        {!helo && (
+        {!comHelo && (
           <>
             <p className="fraco">
               Use o mesmo e-mail nas duas. Se você já usa a Helô com outro e-mail, fale com o suporte para juntar as contas.
@@ -71,7 +71,7 @@ export default async function Dono({ searchParams }: { searchParams: Promise<{ t
   const inicioMesData = `${a}-${String(m).padStart(2, '0')}-01`
   const inicioMes = new Date(Date.UTC(a!, m! - 1, 1)).toISOString()
 
-  const [visitasHoje, equipe, metricas, doMes, dinheiro, notas, config, eventos] = await Promise.all([
+  const [visitasHoje, equipe, metricas, doMes, dinheiro, notas, config, eventos, helo] = await Promise.all([
     admin
       .from('atendimentos')
       .select('id, periodo, status, tecnico_id, cliente:clientes(bairro)')
@@ -95,6 +95,7 @@ export default async function Dono({ searchParams }: { searchParams: Promise<{ t
       .eq('empresa_id', empresa.id)
       .gte('criado_em', inicioDoDia(empresa.fuso))
       .order('criado_em', { ascending: false }),
+    resumoHelo(user.id, inicioMesData, hoje),
   ])
 
   const modoTv = tv === '1'
@@ -136,26 +137,97 @@ export default async function Dono({ searchParams }: { searchParams: Promise<{ t
     {
       id: 'rua',
       titulo: 'Na rua agora',
+      origem: 'Laura',
       tipo: 'tecnicos',
       tecnicos,
     },
     {
       id: 'dinheiro',
-      titulo: 'Dinheiro do mês (Helô)',
+      titulo: 'Dinheiro do mês',
+      origem: 'Helô',
       tipo: 'numeros',
       numeros: mostrarValores
         ? [
             { rotulo: 'Recebido', valor: reais(dinheiro.recebido), destaque: true },
             { rotulo: 'Lucro', valor: reais(dinheiro.lucro), alerta: dinheiro.lucro < 0 },
             { rotulo: 'A receber', valor: reais(dinheiro.aReceber) },
+            { rotulo: 'Atrasado', valor: reais(helo.vencidoAReceber), alerta: helo.vencidoAReceber > 0 },
             { rotulo: 'Despesas pagas', valor: reais(dinheiro.despesas) },
             { rotulo: 'Ticket médio', valor: ticket ? reais(ticket) : '–' },
+            ...(helo.retiradaPct && dinheiro.lucro > 0
+              ? [
+                  {
+                    rotulo: 'Pode retirar',
+                    valor: reais(Math.round((dinheiro.lucro * helo.retiradaPct) / 100)),
+                    nota: `${helo.retiradaPct}% do lucro, como definido na Helô`,
+                  },
+                ]
+              : []),
           ]
         : [{ rotulo: 'Valores escondidos na TV', valor: '–', nota: 'Ligue em Configurações para mostrar' }],
+      meta:
+        mostrarValores && helo.metaLucro
+          ? { rotulo: 'Meta de lucro do mês', atual: Math.max(0, dinheiro.lucro), alvo: helo.metaLucro, texto: `${reais(Math.max(0, dinheiro.lucro))} de ${reais(helo.metaLucro)}` }
+          : undefined,
+    },
+    {
+      id: 'orcamentos',
+      titulo: 'Orçamentos do mês',
+      origem: 'Helô',
+      tipo: 'numeros',
+      numeros: [
+        {
+          rotulo: 'Aprovação',
+          valor: helo.orcamentos.aprovados + helo.orcamentos.rejeitados ? `${Math.round((100 * helo.orcamentos.aprovados) / (helo.orcamentos.aprovados + helo.orcamentos.rejeitados))}%` : '–',
+          destaque: true,
+        },
+        { rotulo: 'Enviados', valor: String(helo.orcamentos.enviados) },
+        { rotulo: 'Aprovados', valor: String(helo.orcamentos.aprovados), nota: mostrarValores ? reais(helo.orcamentos.valorAprovado) : undefined },
+        { rotulo: 'Esperando resposta', valor: String(helo.orcamentos.emAberto), nota: mostrarValores ? reais(helo.orcamentos.valorEmAberto) : undefined },
+        {
+          rotulo: 'Recuperados pela Laura',
+          valor: String(mes.filter((v) => v.orcamento_status === 'recuperado').length),
+        },
+      ],
+    },
+    {
+      id: 'os',
+      titulo: 'Ordens de serviço',
+      origem: 'Helô',
+      tipo: 'numeros',
+      numeros: [
+        { rotulo: 'Concluídas no mês', valor: String(helo.os.concluidasMes), destaque: true },
+        { rotulo: 'Em andamento', valor: String(helo.os.andamento) },
+        { rotulo: 'Pendentes', valor: String(helo.os.pendentes) },
+        {
+          rotulo: 'Concluídas sem pagamento',
+          valor: String(helo.os.concluidasSemPagar),
+          nota: mostrarValores && helo.os.valorSemPagar ? reais(helo.os.valorSemPagar) : undefined,
+          alerta: helo.os.concluidasSemPagar > 0,
+        },
+      ],
+    },
+    {
+      id: 'recorrencia',
+      titulo: 'Manutenções e clientes',
+      origem: 'Helô',
+      tipo: 'numeros',
+      numeros: [
+        { rotulo: 'Manutenções vencidas', valor: String(helo.manutencoes.vencidas), alerta: helo.manutencoes.vencidas > 0, destaque: true },
+        { rotulo: 'Nos próximos 7 dias', valor: String(helo.manutencoes.prox7) },
+        { rotulo: 'Nos próximos 30 dias', valor: String(helo.manutencoes.prox30) },
+        {
+          rotulo: 'Planos de manutenção',
+          valor: String(helo.planos.ativos),
+          nota: mostrarValores && helo.planos.receitaMensal ? `${reais(helo.planos.receitaMensal)} por mês garantidos` : undefined,
+        },
+        { rotulo: 'Clientes', valor: String(helo.clientes.ativos), nota: `${helo.clientes.novosMes} novos no mês` },
+      ],
     },
     {
       id: 'funil',
       titulo: 'Do WhatsApp ao conserto (mês)',
+      origem: 'Laura',
       tipo: 'funil',
       etapas: [
         { rotulo: 'Conversas', valor: mt?.conversas ?? 0 },
@@ -167,9 +239,11 @@ export default async function Dono({ searchParams }: { searchParams: Promise<{ t
     {
       id: 'hoje',
       titulo: 'Hoje',
+      origem: 'Laura + Helô',
       tipo: 'numeros',
       numeros: [
         { rotulo: 'Visitas', valor: String(visitas.length), destaque: true },
+        { rotulo: 'Compromissos na agenda da Helô', valor: String(helo.agendaHoje) },
         { rotulo: 'Feitas', valor: String(visitas.filter((v) => v.status === 'finalizado').length) },
         { rotulo: 'Em andamento', valor: String(visitas.filter((v) => ['a_caminho', 'em_andamento'].includes(v.status)).length) },
         {
@@ -187,9 +261,15 @@ export default async function Dono({ searchParams }: { searchParams: Promise<{ t
     {
       id: 'qualidade',
       titulo: 'Qualidade (mês)',
+      origem: 'Laura + Helô',
       tipo: 'numeros',
       numeros: [
         { rotulo: 'Recomendariam você', valor: recomendam == null ? '–' : `${recomendam} em 10`, destaque: true },
+        {
+          rotulo: 'Estrelas nas OS',
+          valor: helo.avaliacoes.media == null ? '–' : String(helo.avaliacoes.media).replace('.', ','),
+          nota: `${helo.avaliacoes.respondidas} avaliações na Helô`,
+        },
         {
           rotulo: 'Em casa na visita',
           valor: mt?.comparecimento_com_lembrete != null ? `${mt.comparecimento_com_lembrete}%` : '–',

@@ -17,10 +17,13 @@ type Tecnico = {
   horario: string | null
 }
 
+type Meta = { rotulo: string; atual: number; alvo: number; texto: string }
+type Base = { id: string; titulo: string; origem: 'Laura' | 'Helô' | 'Laura + Helô' }
+
 export type Bloco =
-  | { id: string; titulo: string; tipo: 'numeros'; numeros: Numero[] }
-  | { id: string; titulo: string; tipo: 'tecnicos'; tecnicos: Tecnico[] }
-  | { id: string; titulo: string; tipo: 'funil'; etapas: Array<{ rotulo: string; valor: number }> }
+  | (Base & { tipo: 'numeros'; numeros: Numero[]; meta?: Meta })
+  | (Base & { tipo: 'tecnicos'; tecnicos: Tecnico[] })
+  | (Base & { tipo: 'funil'; etapas: Array<{ rotulo: string; valor: number }> })
 
 const CHAVE = 'laura-dono-ocultos'
 
@@ -113,7 +116,9 @@ export function PainelDono({
           .filter((b) => !ocultos.includes(b.id))
           .map((b) => (
             <section key={b.id} className={`dono-bloco dono-${b.tipo}`}>
-              <h2>{b.titulo}</h2>
+              <h2>
+                {b.titulo} <span className="dono-origem">{b.origem}</span>
+              </h2>
               {b.tipo === 'numeros' && (
                 <dl className="dono-numeros">
                   {b.numeros.map((n) => (
@@ -124,6 +129,17 @@ export function PainelDono({
                     </div>
                   ))}
                 </dl>
+              )}
+              {b.tipo === 'numeros' && b.meta && (
+                <div className="dono-meta">
+                  <div className="dono-meta-topo">
+                    <span>{b.meta.rotulo}</span>
+                    <span className="numero">{b.meta.texto}</span>
+                  </div>
+                  <div className="dono-funil-barra">
+                    <span style={{ width: `${Math.min(100, Math.round((100 * b.meta.atual) / b.meta.alvo))}%` }} />
+                  </div>
+                </div>
               )}
               {b.tipo === 'tecnicos' &&
                 (b.tecnicos.length === 0 ? (

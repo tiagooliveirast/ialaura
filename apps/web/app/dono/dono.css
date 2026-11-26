@@ -238,3 +238,35 @@
   content: '✓ ';
   color: var(--certo);
 }
+
+.dono-origem {
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--linha);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  vertical-align: middle;
+}
+
+.dono-meta {
+  margin-top: 16px;
+  display: grid;
+  gap: 6px;
+}
+
+.dono-meta-topo {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.875rem;
+}
+
+.dono-meta .dono-funil-barra > span {
+  background: var(--certo);
+}
+
+.dono-tv .dono-origem {
+  border-color: #2b4570;
+}
