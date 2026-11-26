@@ -92,10 +92,11 @@ export function reais(centavos: number): string {
 }
 
 // Preços vigentes, em centavos. O painel admin pode sobrepor por empresa.
+// Combo = Helô (R$56) + Laura (R$437), sem desconto; o diferencial é o Painel do Dono, que só existe no combo.
 export const PRECOS = {
-  soloMensal: 29700,
+  soloMensal: 43700,
   tecnicoAdicional: 5500,
-  comboHeloMensal: 34000,
+  comboHeloMensal: 49300,
   comboTecnicoAdicional: 10200,
 } as const
 
