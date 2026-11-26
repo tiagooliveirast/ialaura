@@ -1,0 +1,94 @@
+.admin .cabecalho {
+  align-items: flex-start;
+}
+
+.filtros-admin {
+  margin: 0;
+  border-bottom: 0;
+}
+
+.secao-admin {
+  margin-top: 40px;
+}
+
+.secao-admin h2 {
+  font-size: 1.25rem;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--linha);
+}
+
+.indicadores {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  border-left: 1px solid var(--linha);
+}
+
+.indicador {
+  padding: 16px 18px;
+  border-right: 1px solid var(--linha);
+  border-bottom: 1px solid var(--linha);
+  background: var(--superficie);
+}
+
+.indicador dt {
+  font-size: 0.8125rem;
+  color: var(--texto-2);
+}
+
+.indicador dd {
+  margin: 6px 0 0;
+  font-family: var(--fonte-titulo);
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--marinho);
+  line-height: 1.1;
+}
+
+.indicador p {
+  margin: 6px 0 0;
+  font-size: 0.8125rem;
+}
+
+.indicador.destaque dd {
+  color: var(--laranja-forte);
+}
+
+.frases {
+  margin-top: 20px;
+  padding: 20px;
+  background: var(--superficie);
+  border: 1px solid var(--linha);
+  border-left: 3px solid var(--laranja);
+  border-radius: var(--raio);
+}
+
+.frases h3 {
+  font-size: 1rem;
+  margin: 0 0 8px;
+}
+
+.frases ul {
+  margin: 0 0 10px;
+  padding-left: 18px;
+}
+
+.frases li {
+  padding: 4px 0;
+}
+
+.alertas {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.alertas li {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--linha);
+}
+
+.texto-atencao {
+  color: var(--atencao);
+  font-weight: 600;
+}
