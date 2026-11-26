@@ -68,3 +68,5 @@ export default async function Novo({ searchParams }: { searchParams: Promise<{ e
     </div>
   )
 }
+
+export const dynamic = 'force-dynamic'

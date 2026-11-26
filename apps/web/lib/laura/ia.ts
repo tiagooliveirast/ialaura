@@ -38,7 +38,11 @@ export function custoMicroUsd(tokensEntrada: number, tokensSaida: number): numbe
   return Math.round(tokensEntrada * entrada + tokensSaida * saida)
 }
 
-export async function perguntar(mensagens: MensagemIA[], ferramentas: Ferramenta[]): Promise<RespostaIA> {
+export async function perguntar(
+  mensagens: MensagemIA[],
+  ferramentas: Ferramenta[],
+  opcoes: { maxTokens?: number; json?: boolean } = {},
+): Promise<RespostaIA> {
   const chave = process.env.OPENAI_API_KEY
   if (!chave) throw new ErroIA('Falta OPENAI_API_KEY no ambiente.')
   const modelo = modeloPadrao()
@@ -49,10 +53,10 @@ export async function perguntar(mensagens: MensagemIA[], ferramentas: Ferramenta
     body: JSON.stringify({
       model: modelo,
       messages: mensagens,
-      tools: ferramentas,
-      tool_choice: 'auto',
+      ...(ferramentas.length ? { tools: ferramentas, tool_choice: 'auto' } : {}),
       temperature: 0.3,
-      max_tokens: 400,
+      max_tokens: opcoes.maxTokens ?? 400,
+      ...(opcoes.json ? { response_format: { type: 'json_object' } } : {}),
     }),
   })
 

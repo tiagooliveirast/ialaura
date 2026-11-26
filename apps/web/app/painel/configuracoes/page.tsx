@@ -167,3 +167,5 @@ export default async function Configuracoes({
     </div>
   )
 }
+
+export const dynamic = 'force-dynamic'

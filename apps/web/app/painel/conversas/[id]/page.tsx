@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { exigirMembro } from '@/lib/sessao'
 import { mudarEstado, responder } from '../acoes'
+import { salvarLicao } from '../../laura/acoes-licoes'
 
 export const metadata: Metadata = { title: 'Conversa' }
 export const dynamic = 'force-dynamic'
@@ -16,11 +17,12 @@ export default async function Conversa({
   searchParams,
 }: {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ erro?: string }>
+  searchParams: Promise<{ erro?: string; licao?: string }>
 }) {
   const { id } = await params
-  const { erro } = await searchParams
-  const { sb, empresa } = await exigirMembro()
+  const { erro, licao } = await searchParams
+  const { sb, membro, empresa } = await exigirMembro()
+  const podeEnsinar = membro.papel === 'dono'
 
   const { data: conversa } = await sb
     .from('conversas')
@@ -82,12 +84,13 @@ export default async function Conversa({
           {erro}
         </p>
       )}
+      {licao && <p className="aviso aviso-ok">Lição guardada. A Laura passa a responder assim nas próximas conversas.</p>}
       {c.estado === 'humano' && (
         <p className="aviso">A Laura está fora desta conversa. Ela só volta a responder se você devolver.</p>
       )}
 
       <ol className="mensagens painel">
-        {mensagens.map((m) => (
+        {mensagens.map((m, i) => (
           <li key={m.id} className={`balao balao-${m.autor}`}>
             <span className="balao-autor">{AUTOR[m.autor]}</span>
             {m.conteudo ?? <em className="fraco">[{m.tipo}: conteúdo não suportado]</em>}
@@ -100,6 +103,31 @@ export default async function Conversa({
                 minute: '2-digit',
               })}
             </time>
+            {podeEnsinar && m.autor === 'ia' && m.conteudo && (
+              <details className="ensinar">
+                <summary className="link-botao">Eu responderia diferente</summary>
+                <form action={salvarLicao} className="formulario">
+                  <input type="hidden" name="origem" value="correcao" />
+                  <input type="hidden" name="conversa_id" value={c.id} />
+                  <input type="hidden" name="resposta_laura" value={m.conteudo} />
+                  <input type="hidden" name="volta" value={`/painel/conversas/${c.id}`} />
+                  <label className="campo">
+                    <span>Quando o cliente disser algo como</span>
+                    <input
+                      name="situacao"
+                      maxLength={600}
+                      required
+                      defaultValue={[...mensagens.slice(0, i)].reverse().find((x) => x.autor === 'cliente')?.conteudo ?? ''}
+                    />
+                  </label>
+                  <label className="campo">
+                    <span>Responda assim</span>
+                    <textarea name="resposta_ideal" rows={3} maxLength={2000} required />
+                  </label>
+                  <button className="botao">Guardar lição</button>
+                </form>
+              </details>
+            )}
           </li>
         ))}
       </ol>

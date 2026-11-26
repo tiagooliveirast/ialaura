@@ -91,3 +91,5 @@ export default async function Tecnico({ searchParams }: { searchParams: Promise<
     </>
   )
 }
+
+export const dynamic = 'force-dynamic'

@@ -978,3 +978,120 @@ a {
     position: static;
   }
 }
+
+/* Ensinar a Laura (simulador e conversas) */
+.simulador-opcao {
+  flex-basis: 100%;
+  font-size: 0.8125rem;
+  color: #c9d2df;
+}
+
+.ensinar-abrir,
+.ensinar > summary {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.ensinar {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--linha);
+  display: grid;
+  gap: 8px;
+}
+
+.ensinar .campo span {
+  font-size: 0.8125rem;
+}
+
+.ensinar-acoes {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.ensinar-ok {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.8125rem;
+  color: var(--certo);
+}
+
+.aviso-ok {
+  border-color: #b5d6c3;
+  background: #eef6f1;
+  color: var(--certo);
+}
+
+/* Lições */
+.licoes {
+  margin-top: 24px;
+  padding: 20px;
+}
+
+.licoes-topo {
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.licoes-total {
+  white-space: nowrap;
+  font-weight: 600;
+  color: var(--marinho);
+}
+
+.licoes ul {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.licao {
+  padding: 12px 14px;
+  border: 1px solid var(--linha);
+  border-radius: var(--raio);
+  background: var(--superficie);
+}
+
+.licao p {
+  margin: 0 0 4px;
+}
+
+.licao-sugerida {
+  border-color: #e8d3a8;
+  background: #fbf7ee;
+}
+
+.licao-desligada {
+  opacity: 0.6;
+}
+
+.licao-meta {
+  font-size: 0.8125rem;
+}
+
+.licao-acoes {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.licoes-sugestoes {
+  margin-bottom: 20px;
+}
+
+.licao-nova {
+  display: grid;
+  gap: 10px;
+  max-width: 640px;
+  padding-top: 16px;
+  border-top: 1px solid var(--linha);
+}

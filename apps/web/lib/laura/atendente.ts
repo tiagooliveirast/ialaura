@@ -3,6 +3,7 @@ import type { supabaseAdmin } from '@/lib/supabase/admin'
 import { descreverVaga, proximosDias, vagasDisponiveis, type Vaga } from './agenda'
 import { lerConhecimento, PERGUNTAR_ANTES, TRANSFERIR_QUANDO, type Conhecimento } from './conhecimento'
 import { custoMicroUsd, perguntar, type Ferramenta, type MensagemIA } from './ia'
+import { licoesAtivas, SITUACOES_HUMANAS, type Licao } from './licoes'
 
 type SupabaseClient = ReturnType<typeof supabaseAdmin>
 
@@ -50,6 +51,40 @@ const FERRAMENTAS: Ferramenta[] = [
   {
     type: 'function',
     function: {
+      name: 'remarcar_visita',
+      description:
+        'Muda a data de uma visita que o cliente já tem marcada (lista VISITAS DESTE CLIENTE). Só chame depois que o cliente escolheu um novo horário da lista de vagas.',
+      parameters: {
+        type: 'object',
+        properties: {
+          visita: { type: 'string', description: 'Código da visita, exatamente como na lista VISITAS DESTE CLIENTE' },
+          data: { type: 'string', description: 'Nova data AAAA-MM-DD, exatamente como na lista de vagas' },
+          periodo: { type: 'string', enum: [...PERIODOS] },
+        },
+        required: ['visita', 'data', 'periodo'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'desmarcar_visita',
+      description:
+        'Desmarca uma visita que o cliente já tem marcada. Use quando o cliente pedir para cancelar, ou quando ele não puder agora e preferir remarcar depois (por exemplo luto, doença, viagem). Antes, confirme com o cliente.',
+      parameters: {
+        type: 'object',
+        properties: {
+          visita: { type: 'string', description: 'Código da visita, exatamente como na lista VISITAS DESTE CLIENTE' },
+          motivo: { type: 'string', description: 'Motivo em poucas palavras, como o cliente contou' },
+          remarcar_depois: { type: 'boolean', description: 'true se o cliente quer remarcar mais tarde' },
+        },
+        required: ['visita', 'motivo', 'remarcar_depois'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
       name: 'passar_para_humano',
       description:
         'Passa a conversa para uma pessoa da empresa e para de responder. Use nas situações listadas em QUANDO PASSAR PARA A EQUIPE, quando o cliente pedir para falar com alguém, ou quando a pergunta não estiver respondida nas informações da empresa.',
@@ -68,12 +103,16 @@ function linha(rotulo: string, valor: string | undefined | null): string {
   return valor ? `- ${rotulo}: ${valor}` : ''
 }
 
+export type VisitaCliente = { id: string; codigo: string; data: string; periodo: Periodo; descricao: string | null }
+
 export function montarInstrucoes(
   empresa: EmpresaIA,
   servicos: string[],
   areas: string[],
   vagas: Vaga[],
   hoje: string,
+  licoes: Licao[] = [],
+  visitasCliente: VisitaCliente[] = [],
 ): string {
   const c = lerConhecimento(empresa.conhecimento)
   const nome = c.nome_assistente || 'Laura'
@@ -104,6 +143,13 @@ export function montarInstrucoes(
     '- Ofereça até 3 horários da lista de vagas.',
     '- Peça nome e endereço com número e bairro. Depois chame marcar_visita.',
     '- Depois de marcar, confirme o dia e o período em uma frase.',
+    '',
+    SITUACOES_HUMANAS,
+    '',
+    'VISITA JÁ MARCADA',
+    '- Se o cliente não puder no dia, ofereça remarcar com os horários da lista de vagas e chame remarcar_visita.',
+    '- Se ele não souber quando vai poder, chame desmarcar_visita com remarcar_depois = true e diga que fica à disposição: é só chamar quando quiser.',
+    '- Nunca pressione o cliente para manter a visita.',
     '',
     'QUANDO PASSAR PARA A EQUIPE (chame passar_para_humano)',
     '- O cliente pede para falar com uma pessoa.',
@@ -149,6 +195,20 @@ export function montarInstrucoes(
     ...(c.faq?.length
       ? ['PERGUNTAS FREQUENTES (responda com estas palavras, adaptando ao contexto)', ...c.faq.map((f) => `- P: ${f.pergunta}\n  R: ${f.resposta}`), '']
       : []),
+    ...(licoes.length
+      ? [
+          'LIÇÕES DO DONO (a empresa ensinou assim; siga o jeito e as palavras, adaptando ao contexto. Elas valem mais que o jeito padrão)',
+          ...licoes.map((l) => `- Quando: ${l.situacao}\n  Responda assim: ${l.resposta_ideal}`),
+          '',
+        ]
+      : []),
+    ...(visitasCliente.length
+      ? [
+          'VISITAS DESTE CLIENTE (código | data | período | o que é)',
+          ...visitasCliente.map((v) => `- ${v.codigo} | ${v.data} | ${v.periodo} (${descreverVaga(v)}) | ${v.descricao ?? 'sem descrição'}`),
+          '',
+        ]
+      : []),
     'VAGAS DISPONÍVEIS (data AAAA-MM-DD | período)',
     ...(vagas.length
       ? vagas.slice(0, 12).map((v) => `- ${v.data} | ${v.periodo} (${descreverVaga(v)})`)
@@ -157,12 +217,14 @@ export function montarInstrucoes(
   return partes.filter((l) => l !== '').join('\n')
 }
 
-async function contexto(sb: SupabaseClient, empresa: EmpresaIA) {
+async function contexto(sb: SupabaseClient, empresa: EmpresaIA, telefone: string | null, visitasFicticias: VisitaCliente[] = []) {
   const hoje = hojeEm(empresa.fuso)
   const c = lerConhecimento(empresa.conhecimento)
-  const [{ data: servicos }, { data: areas }] = await Promise.all([
+  const [{ data: servicos }, { data: areas }, licoes, visitas] = await Promise.all([
     sb.from('servicos').select('nome, aparelho').eq('empresa_id', empresa.id).eq('ativo', true),
     sb.from('areas_atendimento').select('cidade, bairro').eq('empresa_id', empresa.id),
+    licoesAtivas(sb, empresa.id),
+    telefone ? visitasDoCliente(sb, empresa.id, telefone, hoje) : Promise.resolve(visitasFicticias),
   ])
   const vagas = await vagasDisponiveis(sb, empresa.id, proximosDias(hoje, 7, c).filter((d) => d > hoje))
   const sistema = montarInstrucoes(
@@ -171,11 +233,34 @@ async function contexto(sb: SupabaseClient, empresa: EmpresaIA) {
     (areas ?? []).map((a) => [a.bairro, a.cidade].filter(Boolean).join(', ')),
     vagas,
     hoje,
+    licoes,
+    visitas,
   )
-  return { sistema, vagas }
+  return { sistema, vagas, visitas }
 }
 
-type Executor = (nome: string, args: Record<string, unknown>, vagas: Vaga[]) => Promise<{ resultado: string; acao?: string; atendimentoId?: string; humano?: boolean }>
+/** Visitas futuras do cliente desta conversa. O código curto evita mostrar o id inteiro ao modelo. */
+async function visitasDoCliente(sb: SupabaseClient, empresaId: string, telefone: string, hoje: string): Promise<VisitaCliente[]> {
+  const { data: cliente } = await sb
+    .from('clientes')
+    .select('id')
+    .eq('empresa_id', empresaId)
+    .eq('telefone', telefone)
+    .maybeSingle<{ id: string }>()
+  if (!cliente) return []
+  const { data } = await sb
+    .from('atendimentos')
+    .select('id, data, periodo, descricao')
+    .eq('empresa_id', empresaId)
+    .eq('cliente_id', cliente.id)
+    .gte('data', hoje)
+    .in('status', ['agendado', 'confirmado', 'atrasado'])
+    .order('data')
+    .limit(5)
+  return (data ?? []).map((a) => ({ id: a.id, codigo: a.id.slice(0, 8), data: a.data, periodo: a.periodo as Periodo, descricao: a.descricao }))
+}
+
+type Executor = (nome: string, args: Record<string, unknown>, vagas: Vaga[], visitas: VisitaCliente[]) => Promise<{ resultado: string; acao?: string; atendimentoId?: string; humano?: boolean }>
 
 /** Laço da conversa com o modelo: até 3 rodadas de ferramenta. */
 async function conversar(
@@ -184,8 +269,10 @@ async function conversar(
   turnos: Turno[],
   executar: Executor,
   conversaId: string | null,
+  telefone: string | null,
+  visitasFicticias: VisitaCliente[] = [],
 ): Promise<ResultadoAtendente> {
-  const { sistema, vagas } = await contexto(sb, empresa)
+  const { sistema, vagas, visitas } = await contexto(sb, empresa, telefone, visitasFicticias)
   const mensagens: MensagemIA[] = [
     { role: 'system', content: sistema },
     ...turnos.map((t): MensagemIA => (t.autor === 'cliente' ? { role: 'user', content: t.texto } : { role: 'assistant', content: t.texto })),
@@ -219,7 +306,7 @@ async function conversar(
       } catch {
         // argumento inválido: o executor responde com erro para o modelo corrigir
       }
-      const e = await executar(chamada.function.name, args, vagas)
+      const e = await executar(chamada.function.name, args, vagas, visitas)
       if (e.humano) passouParaHumano = true
       if (e.atendimentoId) atendimentoCriado = e.atendimentoId
       if (e.acao) acoes.push(e.acao)
@@ -256,7 +343,10 @@ export async function atender(
     sb,
     empresa,
     turnos,
-    async (nome, args, vagas) => {
+    async (nome, args, vagas, visitas) => {
+      if (nome === 'remarcar_visita' || nome === 'desmarcar_visita') {
+        return mexerNaVisita(sb, empresa.id, nome, args, vagas, visitas)
+      }
       if (nome === 'passar_para_humano') {
         await sb.from('conversas').update({ estado: 'humano' }).eq('id', conversa.id)
         return { resultado: 'Conversa passada para a equipe. Avise o cliente que alguém da empresa vai responder em breve.', humano: true }
@@ -268,16 +358,47 @@ export async function atender(
       return { resultado: 'Ferramenta desconhecida.' }
     },
     conversa.id,
+    conversa.wa_telefone,
   )
 }
 
 /** Simulação no painel: mesma inteligência, nada é gravado nem enviado. */
-export async function simular(sb: SupabaseClient, empresa: EmpresaIA, turnos: Turno[]): Promise<ResultadoAtendente> {
+export async function simular(
+  sb: SupabaseClient,
+  empresa: EmpresaIA,
+  turnos: Turno[],
+  comVisitaMarcada = false,
+): Promise<ResultadoAtendente> {
+  const ficticia: VisitaCliente[] = []
+  if (comVisitaMarcada) {
+    const hoje = hojeEm(empresa.fuso)
+    const [amanha] = proximosDias(hoje, 3, lerConhecimento(empresa.conhecimento)).filter((d) => d > hoje)
+    if (amanha) ficticia.push({ id: '', codigo: 'teste001', data: amanha, periodo: 'manha', descricao: 'Geladeira não está gelando (visita de teste)' })
+  }
   return conversar(
     sb,
     empresa,
     turnos,
-    async (nome, args, vagas) => {
+    async (nome, args, vagas, visitas) => {
+      if (nome === 'remarcar_visita' || nome === 'desmarcar_visita') {
+        const v = visitas.find((x) => x.codigo === String(args.visita ?? ''))
+        if (!v) return { resultado: 'Visita não encontrada na lista VISITAS DESTE CLIENTE.' }
+        if (nome === 'desmarcar_visita') {
+          return {
+            resultado: 'Visita desmarcada. Confirme ao cliente com cuidado.',
+            acao: `Desmarcaria a visita de ${descreverVaga(v)} (motivo: ${String(args.motivo ?? '')}${args.remarcar_depois ? '; cliente quer remarcar depois' : ''})`,
+          }
+        }
+        const data = String(args.data ?? '')
+        const periodo = String(args.periodo ?? '') as Periodo
+        if (!vagas.some((x) => x.data === data && x.periodo === periodo)) {
+          return { resultado: 'Esse horário não está na lista de vagas. Ofereça um horário da lista.' }
+        }
+        return {
+          resultado: `Visita remarcada para ${descreverVaga({ data, periodo })}. Confirme ao cliente.`,
+          acao: `Remarcaria a visita de ${descreverVaga(v)} para ${descreverVaga({ data, periodo })}`,
+        }
+      }
       if (nome === 'passar_para_humano') {
         return {
           resultado: 'Conversa passada para a equipe. Avise o cliente que alguém vai responder em breve.',
@@ -299,7 +420,55 @@ export async function simular(sb: SupabaseClient, empresa: EmpresaIA, turnos: Tu
       return { resultado: 'Ferramenta desconhecida.' }
     },
     null,
+    null,
+    ficticia,
   )
+}
+
+/** Remarcar ou desmarcar de verdade. A troca de status cai na linha do tempo pelo gatilho do banco. */
+async function mexerNaVisita(
+  sb: SupabaseClient,
+  empresaId: string,
+  nome: 'remarcar_visita' | 'desmarcar_visita',
+  args: Record<string, unknown>,
+  vagas: Vaga[],
+  visitas: VisitaCliente[],
+): Promise<{ resultado: string; acao?: string }> {
+  const codigo = typeof args.visita === 'string' ? args.visita.trim() : ''
+  const escolhida = visitas.find((v) => v.codigo === codigo)
+  if (!escolhida) {
+    return { resultado: 'Visita não encontrada na lista VISITAS DESTE CLIENTE. Confira o código.' }
+  }
+  const { data: alvo } = await sb
+    .from('atendimentos')
+    .select('id, descricao')
+    .eq('empresa_id', empresaId)
+    .eq('id', escolhida.id)
+    .in('status', ['agendado', 'confirmado', 'atrasado'])
+    .maybeSingle<{ id: string; descricao: string | null }>()
+  if (!alvo) return { resultado: 'Não achei essa visita. Passe para a equipe.' }
+
+  if (nome === 'desmarcar_visita') {
+    const motivo = String(args.motivo ?? '').slice(0, 200)
+    const nota = `Desmarcada pela Laura a pedido do cliente: ${motivo}${args.remarcar_depois ? ' (quer remarcar depois)' : ''}`
+    const { error } = await sb
+      .from('atendimentos')
+      .update({ status: 'cancelado', descricao: [alvo.descricao, nota].filter(Boolean).join('\n') })
+      .eq('id', alvo.id)
+    if (error) return { resultado: 'Erro ao desmarcar. Passe para a equipe.' }
+    return { resultado: 'Visita desmarcada. Confirme ao cliente com cuidado.', acao: nota }
+  }
+
+  const data = String(args.data ?? '')
+  const periodo = String(args.periodo ?? '') as Periodo
+  if (!PERIODOS.includes(periodo) || !vagas.some((v) => v.data === data && v.periodo === periodo)) {
+    return { resultado: 'Esse horário não está na lista de vagas. Ofereça um horário da lista.' }
+  }
+  const { data: livres } = await sb.rpc('vagas_livres', { p_empresa: empresaId, p_data: data, p_periodo: periodo })
+  if (typeof livres !== 'number' || livres < 1) return { resultado: 'Esse horário acabou de ser preenchido. Ofereça outro.' }
+  const { error } = await sb.from('atendimentos').update({ data, periodo, status: 'agendado' }).eq('id', alvo.id)
+  if (error) return { resultado: 'Erro ao remarcar. Passe para a equipe.' }
+  return { resultado: `Visita remarcada para ${descreverVaga({ data, periodo })}. Confirme ao cliente.`, acao: 'remarcou' }
 }
 
 async function marcarVisita(

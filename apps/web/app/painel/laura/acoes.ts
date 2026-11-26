@@ -109,6 +109,7 @@ export async function salvarTreinamento(form: FormData) {
 /** Simulador: a Laura responde com o treinamento atual. Nada é gravado nem enviado ao WhatsApp. */
 export async function responderSimulacao(
   turnos: Turno[],
+  comVisitaMarcada = false,
 ): Promise<{ resposta: string | null; acoes: string[]; humano: boolean; erro?: string }> {
   const { membro } = await exigirMembro()
   if (membro.papel === 'tecnico') return { resposta: null, acoes: [], humano: false, erro: 'Sem permissão.' }
@@ -130,7 +131,7 @@ export async function responderSimulacao(
   if (!empresa) return { resposta: null, acoes: [], humano: false, erro: 'Empresa não encontrada.' }
 
   try {
-    const r = await simular(sb, empresa, limpos)
+    const r = await simular(sb, empresa, limpos, comVisitaMarcada === true)
     return { resposta: r.resposta, acoes: r.acoes, humano: r.passouParaHumano }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)

@@ -4,6 +4,14 @@ import { completude, lerConhecimento, PERGUNTAR_ANTES, TRANSFERIR_QUANDO } from 
 import { exigirMembro } from '@/lib/sessao'
 import { salvarTreinamento } from './acoes'
 import { Simulador } from './Simulador'
+import { alternarLicao, apagarLicao, salvarLicao } from './acoes-licoes'
+
+const ORIGEM: Record<string, string> = {
+  correcao: 'Corrigida numa conversa',
+  simulador: 'Ensinada no simulador',
+  manual: 'Escrita por você',
+  sugestao: 'Sugestão aprovada',
+}
 
 export const metadata: Metadata = { title: 'Treinar a Laura' }
 export const dynamic = 'force-dynamic'
@@ -42,11 +50,20 @@ export default async function TreinarLaura({ searchParams }: { searchParams: Pro
   if (membro.papel === 'tecnico') redirect('/tecnico')
   const podeEditar = membro.papel === 'dono'
 
-  const [{ data: dados }, { data: servicos }, { data: areas }] = await Promise.all([
+  const [{ data: dados }, { data: servicos }, { data: areas }, { data: licoesDados }] = await Promise.all([
     sb.from('empresas').select('valor_visita_centavos, conhecimento').eq('id', empresa.id).single(),
     sb.from('servicos').select('nome').eq('empresa_id', empresa.id).order('nome'),
     sb.from('areas_atendimento').select('bairro, cidade').eq('empresa_id', empresa.id),
+    sb
+      .from('licoes')
+      .select('id, situacao, resposta_ideal, origem, ativa, criado_em')
+      .eq('empresa_id', empresa.id)
+      .order('criado_em', { ascending: false })
+      .limit(100),
   ])
+  const licoes = (licoesDados ?? []) as Array<{ id: string; situacao: string; resposta_ideal: string; origem: string; ativa: boolean; criado_em: string }>
+  const sugestoes = licoes.filter((l) => l.origem === 'sugestao' && !l.ativa)
+  const ensinadas = licoes.filter((l) => !(l.origem === 'sugestao' && !l.ativa))
   const c = lerConhecimento(dados?.conhecimento)
   const nome = c.nome_assistente || 'Laura'
   const valor = dados?.valor_visita_centavos != null ? (dados.valor_visita_centavos / 100).toFixed(2).replace('.', ',') : ''
@@ -264,10 +281,106 @@ export default async function TreinarLaura({ searchParams }: { searchParams: Pro
         <aside className="treino-lado">
           <Simulador nome={nome} />
           <p className="fraco" style={{ marginTop: 8 }}>
-            Salve o treinamento antes de testar: o simulador usa a versão salva.
+            Salve o treinamento antes de testar: o simulador usa a versão salva. Quando ela responder de um jeito que você não
+            gosta, clique em &quot;Eu responderia diferente&quot;.
           </p>
         </aside>
       </div>
+
+      <section className="licoes painel" id="licoes">
+        <div className="licoes-topo">
+          <div>
+            <h2>O que a {nome} aprendeu</h2>
+            <p className="apoio">
+              Cada lição é &quot;quando acontecer isto, responda assim&quot;. Elas valem mais que o jeito padrão e entram na próxima
+              mensagem. Você ensina pelo simulador, em Conversas (botão &quot;Eu responderia diferente&quot; embaixo de cada resposta
+              dela) ou aqui embaixo.
+            </p>
+          </div>
+          <span className="numero licoes-total">{licoes.filter((l) => l.ativa).length} valendo</span>
+        </div>
+
+        {sugestoes.length > 0 && (
+          <div className="licoes-sugestoes">
+            <h3>Sugestões para você aprovar ({sugestoes.length})</h3>
+            <p className="fraco">
+              Todo dia a {nome} lê as conversas em que alguém da equipe precisou assumir e sugere o que aprender com a resposta de
+              vocês. Nada muda até você aprovar.
+            </p>
+            <ul>
+              {sugestoes.map((l) => (
+                <li key={l.id} className="licao licao-sugerida">
+                  <p>
+                    <strong>Quando:</strong> {l.situacao}
+                  </p>
+                  <p>
+                    <strong>Responder assim:</strong> {l.resposta_ideal}
+                  </p>
+                  {podeEditar && (
+                    <div className="licao-acoes">
+                      <form action={alternarLicao}>
+                        <input type="hidden" name="id" value={l.id} />
+                        <input type="hidden" name="ativa" value="1" />
+                        <button className="botao">Aprovar</button>
+                      </form>
+                      <form action={apagarLicao}>
+                        <input type="hidden" name="id" value={l.id} />
+                        <button className="link-botao">Descartar</button>
+                      </form>
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {ensinadas.length > 0 ? (
+          <ul>
+            {ensinadas.map((l) => (
+              <li key={l.id} className={`licao${l.ativa ? '' : ' licao-desligada'}`}>
+                <p>
+                  <strong>Quando:</strong> {l.situacao}
+                </p>
+                <p>
+                  <strong>Responder assim:</strong> {l.resposta_ideal}
+                </p>
+                <p className="fraco licao-meta">
+                  {ORIGEM[l.origem] ?? 'Ensinada'} em{' '}
+                  {new Date(l.criado_em).toLocaleDateString('pt-BR', { timeZone: empresa.fuso })}
+                  {l.ativa ? '' : ' · desligada'}
+                </p>
+                {podeEditar && (
+                  <div className="licao-acoes">
+                    <form action={alternarLicao}>
+                      <input type="hidden" name="id" value={l.id} />
+                      <input type="hidden" name="ativa" value={l.ativa ? '0' : '1'} />
+                      <button className="link-botao">{l.ativa ? 'Desligar' : 'Ligar de novo'}</button>
+                    </form>
+                    <form action={apagarLicao}>
+                      <input type="hidden" name="id" value={l.id} />
+                      <button className="link-botao">Apagar</button>
+                    </form>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="fraco">Nenhuma lição ainda. A primeira costuma sair no primeiro teste do simulador.</p>
+        )}
+
+        {podeEditar && (
+          <form action={salvarLicao} className="licao-nova">
+            <h3>Ensinar uma situação nova</h3>
+            <input type="hidden" name="origem" value="manual" />
+            <input type="hidden" name="volta" value="/painel/laura#licoes" />
+            <Campo nome="situacao" rotulo="Quando o cliente" max={600} ajuda="Por exemplo: pedir desconto na visita; dizer que outra empresa cobra menos." />
+            <Campo nome="resposta_ideal" rotulo="Responda assim" linhas={3} />
+            <button className="botao">Guardar lição</button>
+          </form>
+        )}
+      </section>
     </div>
   )
 }
