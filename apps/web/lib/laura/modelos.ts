@@ -32,9 +32,17 @@ export const MODELOS = {
     exemplo: ['João Souza', 'terça-feira, 12/05, manhã', 'Rua das Flores, 120, Itapuã'],
   },
   pesquisa: {
-    nome: 'laura_pesquisa_satisfacao',
-    texto: 'Olá, {{1}}! Obrigado por chamar a {{2}}. Pode avaliar o atendimento em menos de um minuto? {{3}}',
+    // v2: a Meta recusa modelo que termina com variável; o texto agora fecha com uma frase.
+    nome: 'laura_pesquisa_satisfacao_v2',
+    texto:
+      'Olá, {{1}}! Obrigado por chamar a {{2}}. Pode avaliar o atendimento em menos de um minuto? {{3}} Sua opinião ajuda muito a gente.',
     exemplo: ['Maria', 'Sheik Manutenções', 'https://ialaura.vercel.app/p/exemplo'],
+  },
+  resumoDoDia: {
+    nome: 'laura_resumo_do_dia',
+    texto:
+      'Resumo de hoje na {{1}}: a Laura conversou com {{2}} clientes e marcou {{3}} visitas ({{4}} fora do horário). Para amanhã: {{5}}. Os detalhes estão no seu painel.',
+    exemplo: ['Sheik Manutenções', '14', '5', '2', '4 visitas, 1 ainda sem confirmação'],
   },
   tecnicoACaminho: {
     nome: 'laura_tecnico_a_caminho',

@@ -1,5 +1,6 @@
 'use server'
 
+import { normalizarTelefone } from '@ialaura/shared'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { comErro, exigirMembro } from '@/lib/sessao'
@@ -27,6 +28,10 @@ export async function salvarConfiguracoes(form: FormData) {
     redirect(comErro(VOLTA, 'O link de avaliação do Google precisa começar com https://'))
   }
 
+  const telResumoBruto = texto(form, 'resumo_telefone', 20)
+  const telResumo = telResumoBruto ? normalizarTelefone(telResumoBruto) : null
+  if (telResumoBruto && !telResumo) redirect(comErro(VOLTA, 'WhatsApp do resumo: escreva com DDD, por exemplo 71 99999-0000.'))
+
   // Mantém o treinamento da Laura e só troca os dias de atendimento.
   const { data: atual } = await sb.from('empresas').select('conhecimento').eq('id', membro.empresa_id).single()
   const conhecimento = {
@@ -41,6 +46,8 @@ export async function salvarConfiguracoes(form: FormData) {
       vagas_por_periodo: vagas,
       link_avaliacao_google: linkGoogle || null,
       mostrar_valores_tv: form.get('mostrar_valores_tv') === 'on',
+      resumo_diario: form.get('resumo_diario') === 'on',
+      resumo_telefone: telResumo,
       conhecimento,
     })
     .eq('id', membro.empresa_id)

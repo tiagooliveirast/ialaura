@@ -2,6 +2,7 @@ import { supabaseAdmin } from '@/lib/supabase/admin'
 import { enviarTexto } from '@/lib/whatsapp'
 import { empresaLiberada } from '@/lib/cobranca'
 import { atender } from './atendente'
+import { transcreverAudio } from './audio'
 
 type Evento = {
   id: number
@@ -17,12 +18,15 @@ type Evento = {
       text?: { body?: string }
       button?: { text?: string }
       interactive?: { button_reply?: { title?: string }; list_reply?: { title?: string } }
+      audio?: { id?: string; mime_type?: string; voice?: boolean }
     }
   }
 }
 
 const SEM_TEXTO =
-  'Por enquanto eu só consigo ler mensagens escritas. Pode me mandar por texto, por favor?'
+  'Não consegui abrir o que você mandou. Pode me escrever em poucas palavras, por favor?'
+
+const AUDIO_FALHOU = 'Não consegui ouvir seu áudio direito. Pode me mandar de novo ou escrever em poucas palavras?'
 
 function textoDa(m: Evento['payload']['mensagem']): string | null {
   return (
@@ -97,7 +101,28 @@ async function processarEvento(ev: Evento) {
     conversa.estado = 'ia'
   }
 
-  const texto = textoDa(mensagem)
+  let texto = textoDa(mensagem)
+  let audioFalhou = false
+  if (!texto && mensagem.type === 'audio' && mensagem.audio?.id) {
+    // A Meta reentrega eventos: só transcreve se a mensagem ainda não foi gravada.
+    const { count } = await sb.from('mensagens').select('id', { count: 'exact', head: true }).eq('wa_message_id', mensagem.id)
+    if ((count ?? 0) > 0) return
+    try {
+      const t = await transcreverAudio(mensagem.audio.id)
+      await sb.from('uso_ia').insert({
+        empresa_id: empresa.id,
+        conversa_id: conversa.id,
+        modelo: t.modelo,
+        tokens_entrada: t.tokensEntrada,
+        tokens_saida: t.tokensSaida,
+        custo_micro_usd: t.custoMicroUsd,
+      })
+      texto = t.texto || null
+    } catch (e) {
+      console.error('laura: falha ao transcrever áudio', e instanceof Error ? e.message : e)
+    }
+    audioFalhou = !texto
+  }
   const { data: gravada } = await sb
     .from('mensagens')
     .upsert(
@@ -121,7 +146,7 @@ async function processarEvento(ev: Evento) {
 
   let resposta: string | null
   if (!texto) {
-    resposta = SEM_TEXTO
+    resposta = audioFalhou ? AUDIO_FALHOU : SEM_TEXTO
   } else {
     const r = await atender(sb, empresa, conversa)
     resposta = r.resposta

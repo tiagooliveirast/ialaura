@@ -1095,3 +1095,113 @@ a {
   padding-top: 16px;
   border-top: 1px solid var(--linha);
 }
+
+/* Entrevista guiada (Treinar a Laura em 9 perguntas) */
+.entrevista {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.entrevista-progresso {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--linha);
+  overflow: hidden;
+  margin: 8px 0 16px;
+}
+
+.entrevista-progresso > div {
+  height: 100%;
+  background: var(--laranja);
+  transition: width 0.25s ease;
+}
+
+.entrevista-conversa {
+  max-height: none;
+}
+
+.entrevista-par {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  list-style: none;
+}
+
+.entrevista-par .balao-ia {
+  align-self: flex-start;
+}
+
+.entrevista-par .balao-humano {
+  align-self: flex-end;
+}
+
+.entrevista-resposta {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  margin-top: 12px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  padding: 8px 12px;
+  border: 1px solid #b9b2a3;
+  border-radius: 999px;
+  background: var(--superficie);
+  font: inherit;
+  font-size: 0.9375rem;
+  cursor: pointer;
+}
+
+.chip-on {
+  border-color: var(--marinho);
+  background: var(--marinho);
+  color: #fff;
+}
+
+.entrevista-outro {
+  display: flex;
+  gap: 8px;
+}
+
+.entrevista-outro input {
+  flex: 1;
+}
+
+.tons {
+  display: grid;
+  gap: 8px;
+}
+
+.tom {
+  display: grid;
+  gap: 2px;
+  text-align: left;
+  padding: 12px 14px;
+  border: 1px solid #b9b2a3;
+  border-radius: var(--raio);
+  background: var(--superficie);
+  font: inherit;
+  cursor: pointer;
+}
+
+.tom span {
+  color: var(--texto-2);
+  font-size: 0.875rem;
+}
+
+.tom-on {
+  border: 2px solid var(--marinho);
+}
+
+.entrevista-acoes {
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+  align-items: center;
+}

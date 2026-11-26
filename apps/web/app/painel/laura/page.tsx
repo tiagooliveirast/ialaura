@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { completude, lerConhecimento, PERGUNTAR_ANTES, TRANSFERIR_QUANDO } from '@/lib/laura/conhecimento'
@@ -79,6 +80,11 @@ export default async function TreinarLaura({ searchParams }: { searchParams: Pro
             Quanto mais você preencher, melhor ela responde. O que ficar vazio, ela não inventa: passa a conversa para você.
           </p>
         </div>
+        {podeEditar && pronto < 60 && (
+          <Link href="/painel/laura/comecar" className="botao botao-claro">
+            Responder 9 perguntas rápidas
+          </Link>
+        )}
         <div className="completude" aria-label={`Treinamento ${pronto}% completo`}>
           <span className="numero">{pronto}%</span>
           <div className="barra-progresso">

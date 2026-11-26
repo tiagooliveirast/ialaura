@@ -12,6 +12,8 @@ type Empresa = {
   vagas_por_periodo: number
   link_avaliacao_google: string | null
   mostrar_valores_tv: boolean
+  resumo_diario: boolean
+  resumo_telefone: string | null
   conhecimento: unknown
 }
 
@@ -27,7 +29,7 @@ export default async function Configuracoes({
   const [{ data: empresa }, { data: conta }] = await Promise.all([
     sb
       .from('empresas')
-      .select('vagas_por_periodo, link_avaliacao_google, mostrar_valores_tv, conhecimento')
+      .select('vagas_por_periodo, link_avaliacao_google, mostrar_valores_tv, resumo_diario, resumo_telefone, conhecimento')
       .eq('id', membro.empresa_id)
       .single<Empresa>(),
     supabaseAdmin()
@@ -100,6 +102,17 @@ export default async function Configuracoes({
         <label className="marcar">
           <input type="checkbox" name="mostrar_valores_tv" defaultChecked={empresa?.mostrar_valores_tv === true} /> Mostrar valores
           em reais no painel de indicadores
+        </label>
+
+        <h2 className="secao">Resumo do dia no seu WhatsApp</h2>
+        <label className="marcar">
+          <input type="checkbox" name="resumo_diario" defaultChecked={empresa?.resumo_diario !== false} /> Receber às 19h o que a
+          Laura fez no dia e como está a agenda de amanhã
+        </label>
+        <label className="campo">
+          <span>WhatsApp que recebe o resumo</span>
+          <input name="resumo_telefone" inputMode="tel" maxLength={20} defaultValue={empresa?.resumo_telefone ?? ''} />
+          <small>Com DDD. Se ficar vazio, vai para o telefone do dono cadastrado em Equipe. Precisa ser diferente do número da empresa.</small>
         </label>
 
         <button className="botao">Salvar configurações</button>

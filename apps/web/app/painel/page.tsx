@@ -77,7 +77,7 @@ export default async function Inicio() {
   const semConfirmarHoje = deHoje.filter((v) => v.status === 'agendado').length
 
   const passos = [
-    { feito: treino >= 60, titulo: `Treinar a ${nomeIA}`, detalhe: `${treino}% preenchido`, link: '/painel/laura' },
+    { feito: treino >= 60, titulo: `Treinar a ${nomeIA}`, detalhe: treino < 30 ? '9 perguntas rápidas' : `${treino}% preenchido`, link: treino < 30 ? '/painel/laura/comecar' : '/painel/laura' },
     { feito: whatsLigado, titulo: 'Ligar o WhatsApp da empresa', detalhe: whatsLigado ? 'Ligado' : 'Em Configurações', link: '/painel/configuracoes' },
     { feito: emCampo.length > 0, titulo: 'Dizer quem vai a campo', detalhe: `${emCampo.length} em campo`, link: '/painel/equipe' },
     { feito: !!pago, titulo: 'Assinatura', detalhe: pago ? 'Ativa' : 'Pendente', link: '/painel/assinatura' },

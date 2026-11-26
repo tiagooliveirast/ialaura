@@ -345,14 +345,17 @@ export async function atender(
 ): Promise<ResultadoAtendente> {
   const { data: historico } = await sb
     .from('mensagens')
-    .select('autor, conteudo')
+    .select('autor, conteudo, tipo')
     .eq('conversa_id', conversa.id)
     .order('criado_em', { ascending: false })
     .limit(20)
   const turnos: Turno[] = (historico ?? [])
     .reverse()
     .filter((m) => m.conteudo)
-    .map((m) => ({ autor: m.autor === 'cliente' ? 'cliente' : 'laura', texto: m.conteudo as string }))
+    .map((m) => ({
+      autor: m.autor === 'cliente' ? 'cliente' : 'laura',
+      texto: m.tipo === 'audio' ? `(áudio transcrito) ${m.conteudo}` : (m.conteudo as string),
+    }))
 
   return conversar(
     sb,

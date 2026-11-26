@@ -92,7 +92,11 @@ export default async function Conversa({
       <ol className="mensagens painel">
         {mensagens.map((m, i) => (
           <li key={m.id} className={`balao balao-${m.autor}`}>
-            <span className="balao-autor">{AUTOR[m.autor]}</span>
+            <span className="balao-autor">
+              {AUTOR[m.autor]}
+              {m.tipo === 'audio' && m.conteudo ? ' · áudio transcrito' : ''}
+              {m.tipo === 'modelo' ? ' · mensagem automática' : ''}
+            </span>
             {m.conteudo ?? <em className="fraco">[{m.tipo}: conteúdo não suportado]</em>}
             <time className="numero">
               {new Date(m.criado_em).toLocaleString('pt-BR', {
