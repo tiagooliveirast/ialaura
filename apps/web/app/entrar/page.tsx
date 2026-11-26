@@ -106,6 +106,11 @@ export default async function Entrar({
         {cadastro ? (
           <>
             Já tem conta? <Link href="/entrar">Entrar</Link>
+            <br />
+            <span className="fraco">
+              Ao criar a conta você concorda com os <Link href="/termos">Termos de uso</Link> e a{' '}
+              <Link href="/privacidade">Política de Privacidade</Link>.
+            </span>
           </>
         ) : (
           <>

@@ -60,17 +60,28 @@ docs/           Este documento, design e roteiro
 - Assinatura Mercado Pago (`/painel/assinatura`, webhook, reconciliação diária); bloqueio só com `COBRANCA_ATIVA=1`
 - Admin da plataforma (`/admin`): empresas, assinatura, custo de IA, liberar sem cobrança
 
+- Treinar a Laura (`/painel/laura`) com entrevista de 9 perguntas (`/painel/laura/comecar`), simulador e lições (`laura.licoes`: correção, simulador, manual e sugestões diárias aprovadas pelo dono)
+- Situações humanas (luto, doença, irritação, risco) e ferramentas confirmar/remarcar/desmarcar visita
+- Confirmação na véspera com botões, cobrança às 17h (`/api/cron/tarde`), resumo do dia às 19h (`/api/cron/noite`)
+- Áudio transcrito e foto descrita (`lib/laura/audio.ts`)
+- Orçamento: técnico informa ao finalizar (`laura.registrar_orcamento`), Laura retoma em 3 dias, orçamento por escrito com botão de aprovar, recuperados no painel e no admin
+- Manutenção de retorno por serviço (`servicos.retorno_meses`) e avisos a partir das manutenções da Helô (`PONTE_HELO_AVISOS=1`)
+- App do técnico: previsão de chegada, rota do dia, Maps/Waze, fotos antes/depois, meu mês (valor só se o dono liberar), Pix ao finalizar
+- Painel do Dono (`/dono`, modo TV): Laura + Helô, só para quem tem as duas
+- Admin: saúde dos clientes, indicações, card para Instagram (`/admin/card`)
+- Privacidade (`/privacidade`) e Termos (`/termos`)
+
+## Ponte com a Helô
+Regra: cada sistema grava só nas próprias tabelas e lê o outro por funções seguras.
+- A Laura lê da Helô (service role, só leitura): `user_subscriptions`, `financial_transactions`, `quotes`, `work_orders`, `customers`, `scheduled_maintenance`, `planos_manutencao`, `pricing_profile`, `configuracao_financeira`, `os_avaliacoes`, `agenda_compromissos` (`lib/dono.ts`).
+- A Helô lê da Laura com a sessão do usuário: `laura.tem_laura()` e `laura.visitas_para_helo(inicio, fim)` (migração 0013).
+- A ligação entre as duas é o usuário (mesmo e-mail / mesmo `auth.users.id`).
+
 ## Banco compartilhado com a Helô
 O schema `laura` vive no projeto Supabase da Helô (refriclube). Cadastro pela Laura leva `produto: 'laura'` nos metadados e os gatilhos da Helô não criam usuário nem teste para essa pessoa (migração 0003). O app lê `LAURA_SUPABASE_*` com prioridade sobre as variáveis do banco de teste.
 
 ## Ainda não existe (ordem sugerida)
 1. Token de WhatsApp por empresa no Vault (hoje um token só, `WHATSAPP_ACCESS_TOKEN`)
-2. Painel do Dono (combo Helô + Laura)
-3. Ponte com a Helô: manutenções programadas e visitas na agenda da Helô
-4. Site institucional completo por empresa (hoje só o agendamento)
-5. App do técnico separado (PWA em apps/tecnico)
-6. Lembretes e pesquisa de satisfação
-7. Checkout e reconciliação Mercado Pago
-8. Tela de TV com indicadores
-9. Google Agenda (OAuth por empresa)
-10. Ponte com a Helô e Painel do Dono
+2. Cadastro do número pela própria empresa (Embedded Signup da Meta)
+3. App do técnico separado (PWA em apps/tecnico)
+4. Google Agenda (OAuth por empresa)

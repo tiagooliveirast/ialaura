@@ -1,6 +1,7 @@
-import { hojeEm } from '@ialaura/shared'
+import { hojeEm, normalizarTelefone } from '@ialaura/shared'
 import { empresaLiberada } from '@/lib/cobranca'
-import { supabaseAdmin } from '@/lib/supabase/admin'
+import { temHelo } from '@/lib/dono'
+import { supabaseAdmin, supabaseAdminHelo } from '@/lib/supabase/admin'
 import { enviarModelo } from '@/lib/whatsapp'
 import { MODELOS, textoDoModelo } from './modelos'
 
@@ -105,6 +106,111 @@ export async function enviarRetornos(): Promise<{ enviados: number; falhas: numb
       } catch (e) {
         falhas++
         console.error('laura: retorno de manutenção', e instanceof Error ? e.message : e)
+      }
+    }
+  }
+  return { enviados, falhas }
+}
+
+const UNIDADES: Record<string, [string, string]> = {
+  dia: ['dia', 'dias'],
+  dias: ['dia', 'dias'],
+  day: ['dia', 'dias'],
+  days: ['dia', 'dias'],
+  semana: ['semana', 'semanas'],
+  semanas: ['semana', 'semanas'],
+  week: ['semana', 'semanas'],
+  weeks: ['semana', 'semanas'],
+  mes: ['mês', 'meses'],
+  meses: ['mês', 'meses'],
+  month: ['mês', 'meses'],
+  months: ['mês', 'meses'],
+  ano: ['ano', 'anos'],
+  anos: ['ano', 'anos'],
+  year: ['ano', 'anos'],
+  years: ['ano', 'anos'],
+}
+
+/**
+ * Ponte com a Helô: manutenções programadas na Helô viram aviso da Laura ao cliente, 3 dias antes.
+ * Só para quem tem as duas. Só lê a Helô; o controle de "já avisei" fica em laura.helo_avisos.
+ * Ligada por PONTE_HELO_AVISOS=1, depois de confirmar que a Helô não manda o mesmo aviso ao cliente.
+ */
+export async function enviarAvisosDaHelo(): Promise<{ enviados: number; falhas: number }> {
+  if (process.env.PONTE_HELO_AVISOS !== '1') return { enviados: 0, falhas: 0 }
+  const sb = supabaseAdmin()
+  const helo = supabaseAdminHelo()
+  const { data: donos } = await sb
+    .from('membros')
+    .select('user_id, empresa:empresas(id, nome, fuso, whatsapp_contas(phone_number_id, status))')
+    .eq('papel', 'dono')
+    .eq('ativo', true)
+  let enviados = 0
+  let falhas = 0
+  for (const d of (donos ?? []) as unknown as Array<{
+    user_id: string
+    empresa: { id: string; nome: string; fuso: string; whatsapp_contas: { phone_number_id: string; status: string } | null }
+  }>) {
+    const conta = d.empresa?.whatsapp_contas
+    if (!conta || conta.status !== 'ativa') continue
+    if (!(await empresaLiberada(d.empresa.id)) || !(await temHelo(d.user_id))) continue
+    const hoje = hojeEm(d.empresa.fuso)
+    const ate = new Date(`${hoje}T12:00:00Z`)
+    ate.setUTCDate(ate.getUTCDate() + 3)
+    const { data: manut } = await helo
+      .from('scheduled_maintenance')
+      .select('id, next_date, procedure_name, equipment_name, interval_value, interval_unit, status, customer:customers(name, phone)')
+      .eq('user_id', d.user_id)
+      .gte('next_date', hoje)
+      .lte('next_date', ate.toISOString().slice(0, 10))
+      .limit(POR_EMPRESA_POR_DIA)
+    for (const m of (manut ?? []) as unknown as Array<{
+      id: string
+      next_date: string
+      procedure_name: string | null
+      equipment_name: string | null
+      interval_value: number | null
+      interval_unit: string | null
+      status: string | null
+      customer: { name: string; phone: string | null } | null
+    }>) {
+      if (['concluida', 'concluido', 'cancelada', 'cancelado', 'inativa', 'inativo'].includes((m.status ?? '').toLowerCase())) continue
+      const telefone = m.customer?.phone ? normalizarTelefone(m.customer.phone) : null
+      if (!telefone || !m.customer) continue
+      // Reserva o aviso antes de enviar: se já existe, outra execução já cuidou dele.
+      const { error: reservado } = await sb
+        .from('helo_avisos')
+        .insert({ empresa_id: d.empresa.id, helo_manutencao_id: m.id, proxima_data: m.next_date })
+      if (reservado) continue
+      const un = UNIDADES[(m.interval_unit ?? '').toLowerCase()]
+      const quanto = m.interval_value && un ? `${m.interval_value} ${m.interval_value === 1 ? un[0] : un[1]}` : 'um tempo'
+      const servico = (m.procedure_name || m.equipment_name || 'manutenção').toLowerCase()
+      const p = [m.customer.name.trim().split(/\s+/)[0] ?? m.customer.name, d.empresa.nome, quanto, servico]
+      try {
+        const waId = await enviarModelo(conta.phone_number_id, telefone, MODELOS.retornoManutencao.nome, p)
+        const agora = new Date().toISOString()
+        const { data: conversa } = await sb
+          .from('conversas')
+          .upsert({ empresa_id: d.empresa.id, wa_telefone: telefone, ultima_msg_em: agora }, { onConflict: 'empresa_id,wa_telefone' })
+          .select('id')
+          .single<{ id: string }>()
+        if (conversa) {
+          await sb.from('mensagens').insert({
+            empresa_id: d.empresa.id,
+            conversa_id: conversa.id,
+            direcao: 'saida',
+            autor: 'ia',
+            wa_message_id: waId,
+            tipo: 'modelo',
+            conteudo: textoDoModelo(MODELOS.retornoManutencao.texto, p),
+          })
+        }
+        enviados++
+      } catch (e) {
+        falhas++
+        // Libera a reserva para tentar de novo amanhã.
+        await sb.from('helo_avisos').delete().eq('helo_manutencao_id', m.id).eq('proxima_data', m.next_date)
+        console.error('laura: aviso da Helô', e instanceof Error ? e.message : e)
       }
     }
   }

@@ -1339,3 +1339,13 @@ a {
   background: var(--papel);
   border: 1px solid var(--linha);
 }
+
+/* Páginas legais */
+.texto-legal h2 {
+  margin-top: 28px;
+  font-size: 1.125rem;
+}
+
+.texto-legal li {
+  margin-bottom: 6px;
+}

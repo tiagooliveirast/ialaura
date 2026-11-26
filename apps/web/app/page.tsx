@@ -249,8 +249,12 @@ export default function Inicio() {
 
       <footer className="rodape">
         <div className="faixa rodape-dentro">
-          <span>IA Laura</span>
-          <Link href="/entrar">Entrar</Link>
+          <span>IA Laura · NetxGestão</span>
+          <span className="rodape-links">
+            <Link href="/privacidade">Privacidade</Link>
+            <Link href="/termos">Termos de uso</Link>
+            <Link href="/entrar">Entrar</Link>
+          </span>
         </div>
       </footer>
     </div>
