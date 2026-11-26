@@ -49,6 +49,7 @@ export async function salvarConfiguracoes(form: FormData) {
       link_avaliacao_google: linkGoogle || null,
       mostrar_valores_tv: form.get('mostrar_valores_tv') === 'on',
       resumo_diario: form.get('resumo_diario') === 'on',
+      tecnico_ve_valores: form.get('tecnico_ve_valores') === 'on',
       resumo_telefone: telResumo,
       conhecimento,
     })

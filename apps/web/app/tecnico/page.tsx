@@ -53,7 +53,7 @@ export default async function Tecnico({ searchParams }: { searchParams: Promise<
     sb.from('empresas').select('conhecimento').eq('id', empresa.id).maybeSingle(),
     sb.rpc('meu_mes'),
   ])
-  const meuMes = (Array.isArray(mes) ? mes[0] : mes) as { finalizadas: number; valor_centavos: number; consertos: number } | null
+  const meuMes = (Array.isArray(mes) ? mes[0] : mes) as { finalizadas: number; valor_centavos: number | null; consertos: number } | null
   const temPix = !!(dadosEmpresa?.conhecimento as { pix_chave?: string } | null)?.pix_chave
   const visitas = (data ?? []) as Visita[]
   // Quantas fotos cada visita já tem (as visitas vieram da função que só devolve as deste técnico).
@@ -118,7 +118,7 @@ export default async function Tecnico({ searchParams }: { searchParams: Promise<
               <dt>Consertos fechados</dt>
               <dd className="numero">{meuMes.consertos}</dd>
             </div>
-            {meuMes.valor_centavos > 0 && (
+            {meuMes.valor_centavos != null && meuMes.valor_centavos > 0 && (
               <div>
                 <dt>Em serviços</dt>
                 <dd className="numero">{reais(meuMes.valor_centavos)}</dd>

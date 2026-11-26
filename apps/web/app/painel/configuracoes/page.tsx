@@ -13,6 +13,7 @@ type Empresa = {
   link_avaliacao_google: string | null
   mostrar_valores_tv: boolean
   resumo_diario: boolean
+  tecnico_ve_valores: boolean
   resumo_telefone: string | null
   conhecimento: unknown
 }
@@ -29,7 +30,7 @@ export default async function Configuracoes({
   const [{ data: empresa }, { data: conta }] = await Promise.all([
     sb
       .from('empresas')
-      .select('vagas_por_periodo, link_avaliacao_google, mostrar_valores_tv, resumo_diario, resumo_telefone, conhecimento')
+      .select('vagas_por_periodo, link_avaliacao_google, mostrar_valores_tv, resumo_diario, resumo_telefone, tecnico_ve_valores, conhecimento')
       .eq('id', membro.empresa_id)
       .single<Empresa>(),
     supabaseAdmin()
@@ -103,6 +104,16 @@ export default async function Configuracoes({
           <input type="checkbox" name="mostrar_valores_tv" defaultChecked={empresa?.mostrar_valores_tv === true} /> Mostrar valores
           em reais no painel de indicadores
         </label>
+
+        <h2 className="secao">O que o técnico vê</h2>
+        <label className="marcar">
+          <input type="checkbox" name="tecnico_ve_valores" defaultChecked={empresa?.tecnico_ve_valores === true} /> Mostrar para os
+          técnicos quanto eles fizeram em serviços no mês
+        </label>
+        <p className="fraco">
+          Desligado, o técnico vê só quantas visitas e consertos fez. Útil para quem trabalha com comissão; deixe desligado se
+          preferir que a equipe não veja o faturamento.
+        </p>
 
         <h2 className="secao">Pix para receber dos clientes</h2>
         <label className="campo">
