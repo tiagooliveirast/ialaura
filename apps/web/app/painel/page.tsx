@@ -43,7 +43,7 @@ export default async function Inicio() {
   const em7 = new Date(Date.UTC(a!, m! - 1, d! + 7)).toISOString().slice(0, 10)
 
   const desde60 = new Date(Date.UTC(a!, m! - 1, d! - 60)).toISOString().slice(0, 10)
-  const [visitas, conversasHumano, atrasados, dados, conta, servicos, areas, equipe, assinatura, metricas, orcamentos] = await Promise.all([
+  const [visitas, conversasHumano, atrasados, dados, conta, servicos, areas, equipe, assinatura, metricas, orcamentos, sempre, notas] = await Promise.all([
     sb
       .from('atendimentos')
       .select('id, data, periodo, status, descricao, tecnico_id, cliente:clientes(nome, bairro), tecnico:membros(nome)')
@@ -54,7 +54,7 @@ export default async function Inicio() {
       .order('periodo'),
     sb.from('conversas').select('id', { count: 'exact', head: true }).eq('estado', 'humano'),
     sb.from('atendimentos').select('id', { count: 'exact', head: true }).lt('data', hoje).in('status', ABERTOS),
-    sb.from('empresas').select('valor_visita_centavos, conhecimento, slug').eq('id', empresa.id).single(),
+    sb.from('empresas').select('valor_visita_centavos, conhecimento, slug, telefone').eq('id', empresa.id).single(),
     admin.from('whatsapp_contas').select('status').eq('empresa_id', empresa.id).maybeSingle(),
     sb.from('servicos').select('id', { count: 'exact', head: true }).eq('empresa_id', empresa.id),
     sb.from('areas_atendimento').select('id', { count: 'exact', head: true }).eq('empresa_id', empresa.id),
@@ -67,7 +67,12 @@ export default async function Inicio() {
       .eq('empresa_id', empresa.id)
       .gte('data', desde60)
       .in('orcamento_status', ['pensando', 'recusado', 'recuperado']),
+    admin.rpc('metricas', { p_inicio: '2020-01-01T00:00:00Z', p_empresa: empresa.id }),
+    admin.from('pesquisas').select('nota_nps').eq('empresa_id', empresa.id).gte('respondido_em', inicioMes).not('nota_nps', 'is', null),
   ])
+  const total = sempre.data as Metricas | null
+  const notasNps = (notas.data ?? []) as Array<{ nota_nps: number }>
+  const recomendam = notasNps.length ? Math.round((10 * notasNps.filter((n) => n.nota_nps >= 9).length) / notasNps.length) : null
   const orc = (orcamentos.data ?? []) as Array<{ orcamento_status: string; orcamento_centavos: number | null; recuperado_em: string | null }>
   const emAberto = orc.filter((o) => o.orcamento_status !== 'recuperado')
   const recuperados = orc.filter((o) => o.orcamento_status === 'recuperado' && o.recuperado_em && o.recuperado_em >= inicioMes)
@@ -151,6 +156,43 @@ export default async function Inicio() {
         </section>
       )}
 
+      {whatsLigado && total && total.conversas === 0 && dados.data?.telefone && (
+        <section className="painel primeiro-teste">
+          <h2>Faça o primeiro teste agora</h2>
+          <p>
+            Do seu celular pessoal, mande uma mensagem para o WhatsApp da empresa como se fosse um cliente. Por exemplo: &quot;Oi,
+            minha geladeira parou de gelar, conseguem vir amanhã?&quot;. A {nomeIA} responde em segundos.
+          </p>
+          <a
+            className="botao"
+            href={`https://wa.me/${String(dados.data.telefone).replace(/\D/g, '')}?text=${encodeURIComponent(
+              'Oi, minha geladeira parou de gelar, conseguem vir amanhã?',
+            )}`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Abrir o WhatsApp e testar
+          </a>
+        </section>
+      )}
+
+      {total && (
+        <section className="conquistas" aria-label="Conquistas">
+          {[
+            { feito: total.conversas > 0, texto: 'Primeira conversa atendida' },
+            { feito: total.visitas_laura > 0, texto: `Primeira visita marcada pela ${nomeIA}` },
+            { feito: total.visitas_fora_horario > 0, texto: 'Primeiro cliente atendido fora do horário' },
+            { feito: total.visitas_laura >= 10, texto: '10 visitas marcadas sozinha' },
+            { feito: (total.pesquisas_respondidas ?? 0) > 0, texto: 'Primeira avaliação de cliente' },
+            { feito: total.visitas_laura >= 50, texto: '50 visitas marcadas sozinha' },
+          ].map((c) => (
+            <span key={c.texto} className={`conquista${c.feito ? ' conquista-feita' : ''}`}>
+              <span aria-hidden="true">{c.feito ? '✓' : '○'}</span> {c.texto}
+            </span>
+          ))}
+        </section>
+      )}
+
       {precisa.length > 0 && (
         <section className="precisa">
           {precisa.map((p) => (
@@ -216,6 +258,13 @@ export default async function Inicio() {
         <div className="bloco-titulo">
           <h2>Este mês com a {nomeIA}</h2>
         </div>
+        {mt && mt.visitas_fora_horario > 0 && (
+          <p className="perda-evitada">
+            {mt.visitas_fora_horario === 1 ? '1 cliente marcou' : `${mt.visitas_fora_horario} clientes marcaram`} visita à noite ou
+            no fim de semana, quando ninguém da empresa estava respondendo. Sem a {nomeIA}, {mt.visitas_fora_horario === 1 ? 'ele' : 'eles'}{' '}
+            provavelmente teriam chamado outra empresa.
+          </p>
+        )}
         {mt ? (
           <dl className="inds">
             <Indicador rotulo="Visitas marcadas por ela" valor={mt.visitas_laura} nota={`${mt.visitas_sem_humano} sem ninguém da equipe`} />
@@ -223,7 +272,11 @@ export default async function Inicio() {
             <Indicador rotulo="Conversas" valor={mt.conversas} nota={`${pct(mt.conversas_viraram_visita, mt.conversas) ?? 0}% viraram visita`} />
             <Indicador rotulo="Tempo de resposta" valor={tempoResposta(mt.resposta_mediana_s)} />
             <Indicador rotulo="Marcadas pelo site" valor={mt.visitas_site} />
-            <Indicador rotulo="Nota dos clientes (NPS)" valor={mt.nps ?? '–'} nota={`${mt.pesquisas_respondidas} respostas`} />
+            <Indicador
+              rotulo="Clientes que recomendariam você"
+              valor={recomendam == null ? '–' : `${recomendam} em 10`}
+              nota={`${mt.pesquisas_respondidas} ${mt.pesquisas_respondidas === 1 ? 'resposta' : 'respostas'} na pesquisa`}
+            />
             {dono && <Indicador rotulo="Valor das visitas da Laura" valor={reais(mt.valor_visitas_laura_centavos)} />}
             <Indicador rotulo="Lembretes enviados" valor={mt.lembretes_enviados} />
           </dl>

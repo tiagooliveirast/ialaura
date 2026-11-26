@@ -16,3 +16,11 @@ export function supabaseAdmin() {
     auth: { persistSession: false, autoRefreshToken: false },
   })
 }
+
+/** Mesmo acesso, nas tabelas da Helô (esquema public). Só leitura no Painel do Dono. */
+export function supabaseAdminHelo() {
+  const url = supabaseUrl()
+  const chave = supabaseServiceKey()
+  if (!url || !chave) throw new Error('Falta configurar o banco.')
+  return createClient(url, chave, { auth: { persistSession: false, autoRefreshToken: false } })
+}

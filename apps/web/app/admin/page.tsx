@@ -139,7 +139,9 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
       <div className="cabecalho">
         <div>
           <h1>Admin da IA Laura</h1>
-          <p className="apoio">Números de toda a plataforma.</p>
+          <p className="apoio">
+            Números de toda a plataforma. <Link href={`/admin/card?periodo=${chave}`}>Gerar card para o Instagram</Link>
+          </p>
         </div>
         <nav className="filtros filtros-admin" aria-label="Período">
           {PERIODOS_ADMIN.map(([k, rotulo]) => (

@@ -57,6 +57,25 @@ export const MODELOS = {
       'Resumo de hoje na {{1}}: a Laura conversou com {{2}} clientes e marcou {{3}} visitas ({{4}} fora do horário). Para amanhã: {{5}}. Os detalhes estão no seu painel.',
     exemplo: ['Sheik Manutenções', '14', '5', '2', '4 visitas, 1 ainda sem confirmação'],
   },
+  tecnicoACaminhoPrevisao: {
+    nome: 'laura_tecnico_a_caminho_previsao',
+    texto: 'Olá, {{1}}! O técnico {{2}} da {{3}} já está a caminho e deve chegar em cerca de {{4}}. Até já!',
+    exemplo: ['Maria', 'Carlos', 'Sheik Manutenções', '30 minutos'],
+  },
+  orcamentoParaAprovar: {
+    nome: 'laura_orcamento_para_aprovar',
+    texto:
+      'Olá, {{1}}! Aqui é da {{2}}. Segue o orçamento do conserto: {{3}}. Valor: {{4}}. Se estiver de acordo, toque em "Aprovo o conserto" que a gente agenda. Se ficou alguma dúvida, é só responder.',
+    exemplo: ['Maria', 'Sheik Manutenções', 'troca do compressor da geladeira', 'R$ 650,00'],
+    botoes: ['Aprovo o conserto', 'Tenho uma dúvida'],
+  },
+  retornoManutencao: {
+    nome: 'laura_retorno_manutencao',
+    texto:
+      'Olá, {{1}}! Aqui é da {{2}}. Já faz {{3}} desde o último serviço de {{4}} na sua casa. Quer que a gente agende a manutenção para manter tudo funcionando bem?',
+    exemplo: ['Maria', 'Sheik Manutenções', '6 meses', 'limpeza de ar-condicionado'],
+    botoes: ['Quero agendar', 'Agora não'],
+  },
   tecnicoACaminho: {
     nome: 'laura_tecnico_a_caminho',
     texto: 'Olá, {{1}}! O técnico {{2}} da {{3}} já está a caminho da sua casa.',

@@ -96,6 +96,7 @@ export default async function Conversa({
               {AUTOR[m.autor]}
               {m.tipo === 'audio' && m.conteudo ? ' · áudio transcrito' : ''}
               {m.tipo === 'modelo' ? ' · mensagem automática' : ''}
+              {m.tipo === 'image' && m.autor === 'cliente' ? ' · foto (descrição da Laura)' : ''}
             </span>
             {m.conteudo ?? <em className="fraco">[{m.tipo}: conteúdo não suportado]</em>}
             <time className="numero">

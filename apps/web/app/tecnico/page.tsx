@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import {
   dataCurta,
+  reais,
   hojeEm,
   ROTULO_PERIODO,
   ROTULO_STATUS,
@@ -13,6 +14,8 @@ import { exigirMembro } from '@/lib/sessao'
 import { sair } from '../entrar/acoes'
 import { BotoesStatus } from './BotoesStatus'
 import { Finalizar } from './Finalizar'
+import { FotosVisita } from './FotosVisita'
+import { supabaseAdmin } from '@/lib/supabase/admin'
 
 export const metadata: Metadata = { title: 'Minha agenda' }
 
@@ -45,12 +48,43 @@ export default async function Tecnico({ searchParams }: { searchParams: Promise<
   const doEscritorio = membro.papel !== 'tecnico'
 
   // Agenda dos próximos 7 dias, sem telefone do cliente: a regra está na função do banco.
-  const [{ data, error }, { data: dadosEmpresa }] = await Promise.all([
+  const [{ data, error }, { data: dadosEmpresa }, { data: mes }] = await Promise.all([
     sb.rpc('meus_atendimentos'),
     sb.from('empresas').select('conhecimento').eq('id', empresa.id).maybeSingle(),
+    sb.rpc('meu_mes'),
   ])
+  const meuMes = (Array.isArray(mes) ? mes[0] : mes) as { finalizadas: number; valor_centavos: number; consertos: number } | null
   const temPix = !!(dadosEmpresa?.conhecimento as { pix_chave?: string } | null)?.pix_chave
   const visitas = (data ?? []) as Visita[]
+  // Quantas fotos cada visita já tem (as visitas vieram da função que só devolve as deste técnico).
+  const { data: fotos } = visitas.length
+    ? await supabaseAdmin()
+        .from('atendimento_fotos')
+        .select('atendimento_id')
+        .in(
+          'atendimento_id',
+          visitas.map((v) => v.id),
+        )
+    : { data: [] as Array<{ atendimento_id: string }> }
+  const nFotos = new Map<string, number>()
+  for (const f of fotos ?? []) nFotos.set(f.atendimento_id, (nFotos.get(f.atendimento_id) ?? 0) + 1)
+  const enderecoDe = (v: Visita) => [v.endereco, v.bairro, v.cidade].filter(Boolean).join(', ')
+  const deHoje = visitas.filter((v) => v.data === hoje && !['finalizado', 'cancelado'].includes(v.status) && enderecoDe(v))
+  const rota =
+    deHoje.length > 0
+      ? `https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=${encodeURIComponent(
+          enderecoDe(deHoje[deHoje.length - 1]!),
+        )}${
+          deHoje.length > 1
+            ? `&waypoints=${encodeURIComponent(
+                deHoje
+                  .slice(0, -1)
+                  .map(enderecoDe)
+                  .join('|'),
+              )}`
+            : ''
+        }`
+      : null
   const hoje = hojeEm(empresa.fuso)
 
   return (
@@ -73,6 +107,31 @@ export default async function Tecnico({ searchParams }: { searchParams: Promise<
       <main className="estreito sem-margem">
         <h1>Minha agenda</h1>
         <p className="apoio">Próximos 7 dias.</p>
+
+        {meuMes && (
+          <dl className="meu-mes">
+            <div>
+              <dt>Visitas feitas no mês</dt>
+              <dd className="numero">{meuMes.finalizadas}</dd>
+            </div>
+            <div>
+              <dt>Consertos fechados</dt>
+              <dd className="numero">{meuMes.consertos}</dd>
+            </div>
+            {meuMes.valor_centavos > 0 && (
+              <div>
+                <dt>Em serviços</dt>
+                <dd className="numero">{reais(meuMes.valor_centavos)}</dd>
+              </div>
+            )}
+          </dl>
+        )}
+
+        {rota && (
+          <a className="botao rota-dia" href={rota} target="_blank" rel="noopener noreferrer">
+            Abrir a rota de hoje no mapa ({deHoje.length} {deHoje.length === 1 ? 'visita' : 'visitas'})
+          </a>
+        )}
         <p className="fraco">Ao tocar nos botões, a posição do celular é registrada para a empresa acompanhar as visitas.</p>
 
         {(erro || error) && (
@@ -92,10 +151,23 @@ export default async function Tecnico({ searchParams }: { searchParams: Promise<
                   <span className="etiqueta">{ROTULO_STATUS[v.status]}</span>
                 </p>
                 <p className="visita-cliente">{v.cliente_nome}</p>
-                <p className="fraco">{[v.endereco, v.bairro, v.cidade].filter(Boolean).join(', ') || 'Endereço não informado'}</p>
+                <p className="fraco">{enderecoDe(v) || 'Endereço não informado'}</p>
+                {enderecoDe(v) && !['finalizado', 'cancelado'].includes(v.status) && (
+                  <p className="mapas">
+                    <a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(enderecoDe(v))}`} target="_blank" rel="noopener noreferrer">
+                      Google Maps
+                    </a>
+                    <a href={`https://waze.com/ul?q=${encodeURIComponent(enderecoDe(v))}&navigate=yes`} target="_blank" rel="noopener noreferrer">
+                      Waze
+                    </a>
+                  </p>
+                )}
                 {(v.servico || v.descricao) && <p className="visita-descricao">{[v.servico, v.descricao].filter(Boolean).join(': ')}</p>}
 
                 {PROXIMOS[v.status] && <BotoesStatus id={v.id} opcoes={PROXIMOS[v.status]!} />}
+                {(v.status === 'em_andamento' || (v.status === 'finalizado' && v.data === hoje)) && (
+                  <FotosVisita id={v.id} quantas={nFotos.get(v.id) ?? 0} />
+                )}
                 {v.status === 'em_andamento' && <Finalizar id={v.id} temPix={temPix} />}
               </li>
             ))}

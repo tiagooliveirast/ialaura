@@ -58,6 +58,18 @@ export function Finalizar({ id, temPix }: { id: string; temPix: boolean }) {
           )}
           {resultado !== 'aprovado' && (
             <>
+              {resultado === 'pensando' && (
+                <>
+                  <label className="campo">
+                    <span>O que precisa ser feito</span>
+                    <input name="servico_orcamento" maxLength={200} />
+                  </label>
+                  <label className="marcar">
+                    <input type="checkbox" name="mandar_orcamento" defaultChecked /> Mandar o orçamento por escrito no WhatsApp do
+                    cliente, com botão para ele aprovar
+                  </label>
+                </>
+              )}
               <label className="campo">
                 <span>O que pesou para o cliente? (opcional)</span>
                 <input name="motivo" maxLength={300} />

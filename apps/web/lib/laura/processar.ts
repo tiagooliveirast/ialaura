@@ -2,7 +2,7 @@ import { supabaseAdmin } from '@/lib/supabase/admin'
 import { enviarImagem, enviarTexto } from '@/lib/whatsapp'
 import { empresaLiberada } from '@/lib/cobranca'
 import { atender } from './atendente'
-import { transcreverAudio } from './audio'
+import { descreverImagem, transcreverAudio } from './audio'
 
 type Evento = {
   id: number
@@ -19,6 +19,7 @@ type Evento = {
       button?: { text?: string }
       interactive?: { button_reply?: { title?: string }; list_reply?: { title?: string } }
       audio?: { id?: string; mime_type?: string; voice?: boolean }
+      image?: { id?: string; mime_type?: string; caption?: string }
     }
   }
 }
@@ -122,6 +123,26 @@ async function processarEvento(ev: Evento) {
       console.error('laura: falha ao transcrever áudio', e instanceof Error ? e.message : e)
     }
     audioFalhou = !texto
+  }
+  if (!texto && mensagem.type === 'image' && mensagem.image?.id) {
+    const { count } = await sb.from('mensagens').select('id', { count: 'exact', head: true }).eq('wa_message_id', mensagem.id)
+    if ((count ?? 0) > 0) return
+    try {
+      const d = await descreverImagem(mensagem.image.id)
+      await sb.from('uso_ia').insert({
+        empresa_id: empresa.id,
+        conversa_id: conversa.id,
+        modelo: d.modelo,
+        tokens_entrada: d.tokensEntrada,
+        tokens_saida: d.tokensSaida,
+        custo_micro_usd: d.custoMicroUsd,
+      })
+      const legenda = mensagem.image.caption?.trim()
+      texto = `${legenda ? `${legenda}\n` : ''}[O que aparece na foto: ${d.texto}]`
+    } catch (e) {
+      console.error('laura: falha ao ler foto', e instanceof Error ? e.message : e)
+      texto = mensagem.image.caption?.trim() || null
+    }
   }
   const { data: gravada } = await sb
     .from('mensagens')

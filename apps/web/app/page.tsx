@@ -182,11 +182,19 @@ export default function Inicio() {
                 </p>
                 <p className="plano-para">Para quem atende sozinho.</p>
                 <ul>
-                  <li>Atendimento da Laura no WhatsApp</li>
+                  <li>Atendimento da Laura no WhatsApp, inclusive áudio e foto</li>
                   <li>Site da empresa com agendamento online</li>
-                  <li>Agenda, lembretes e pesquisa de satisfação</li>
+                  <li>Confirmação da visita na véspera e remarcação sozinha</li>
+                  <li>Retomada de orçamento que não fechou</li>
+                  <li>Cobrança por Pix e pesquisa de satisfação</li>
                   <li>Pedido de avaliação no Google</li>
+                  <li>Resumo do dia no seu WhatsApp</li>
                 </ul>
+                <p className="plano-exemplo">
+                  Dá cerca de <span className="numero">{reais(Math.round(PRECOS.soloMensal / 30))}</span> por dia. Uma atendente com
+                  carteira assinada custa mais de R$ 2.500 por mês com os encargos e trabalha 8 horas; a Laura responde a qualquer
+                  hora.
+                </p>
                 <Link href="/entrar?modo=cadastro" className="botao">
                   Criar minha conta
                 </Link>
@@ -199,8 +207,9 @@ export default function Inicio() {
                 </p>
                 <p className="plano-para">Tudo do plano Solo, mais um acesso para cada técnico.</p>
                 <ul>
-                  <li>App do técnico com a agenda dele</li>
-                  <li>Status em tempo real: indo, atrasado, finalizado</li>
+                  <li>App do técnico com a agenda e a rota do dia</li>
+                  <li>Status em tempo real e previsão de chegada para o cliente</li>
+                  <li>Foto do técnico enviada ao cliente e fotos de antes e depois</li>
                   <li>Vagas multiplicadas pelo número de técnicos</li>
                   <li>Nota do técnico na pesquisa de satisfação</li>
                 </ul>

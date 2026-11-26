@@ -24,6 +24,7 @@ export default async function PainelLayout({ children }: { children: React.React
             <Link href="/painel">Início</Link>
             <Link href="/painel/atendimentos">Atendimentos</Link>
             {membro.atende && <Link href="/tecnico">Minhas visitas</Link>}
+            {membro.papel === 'dono' && <Link href="/dono">Painel do Dono</Link>}
             <Link href="/painel/conversas">Conversas</Link>
             <Link href="/painel/laura">Treinar a Laura</Link>
             {membro.papel === 'dono' && <Link href="/painel/equipe">Equipe</Link>}

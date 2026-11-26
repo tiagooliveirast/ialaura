@@ -2,6 +2,7 @@ import { processarPendentes } from '@/lib/laura/processar'
 import { enviarLembretesVencidos } from '@/lib/laura/lembretes'
 import { reconciliarAssinaturas } from '@/lib/cobranca'
 import { sugerirLicoes } from '@/lib/laura/licoes'
+import { enviarRetornos } from '@/lib/laura/retorno'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 
 export const runtime = 'nodejs'
@@ -24,6 +25,7 @@ export async function GET(req: Request) {
     ['lembretes', () => enviarLembretesVencidos()],
     ['assinaturas', () => reconciliarAssinaturas()],
     ['licoes', () => sugerirLicoes(supabaseAdmin())],
+    ['retornos', () => enviarRetornos()],
   ] as const) {
     try {
       resultado[nome] = await tarefa()

@@ -3,8 +3,8 @@ import type { NextConfig } from 'next'
 const config: NextConfig = {
   transpilePackages: ['@ialaura/shared'],
   poweredByHeader: false,
-  // Fotos da equipe sobem por server action (até 2 MB).
-  experimental: { serverActions: { bodySizeLimit: '3mb' } },
+  // Fotos da equipe e das visitas sobem por server action.
+  experimental: { serverActions: { bodySizeLimit: '20mb' } },
   async headers() {
     return [
       {

@@ -1272,3 +1272,70 @@ a {
   background: var(--papel);
   word-break: break-all;
 }
+
+/* App do técnico: mês, rota, mapas, fotos */
+.meu-mes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.meu-mes > div {
+  padding: 10px 12px;
+  border: 1px solid var(--linha);
+  border-radius: var(--raio);
+  background: var(--superficie);
+}
+
+.meu-mes dt {
+  font-size: 0.8125rem;
+  color: var(--texto-2);
+}
+
+.meu-mes dd {
+  margin: 2px 0 0;
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: var(--marinho);
+}
+
+.rota-dia {
+  display: block;
+  text-align: center;
+  margin: 0 0 16px;
+}
+
+.mapas {
+  display: flex;
+  gap: 16px;
+  margin: 4px 0 0;
+  font-weight: 600;
+}
+
+.fotos-visita {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--linha);
+}
+
+.fotos-botao {
+  text-align: center;
+  cursor: pointer;
+}
+
+.chegada {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+}
+
+.comparacao {
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border-radius: var(--raio);
+  background: var(--papel);
+  border: 1px solid var(--linha);
+}

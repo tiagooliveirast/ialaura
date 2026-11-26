@@ -1,0 +1,240 @@
+.dono {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 24px 20px 48px;
+}
+
+.dono-topo {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.dono-topo h1 {
+  margin: 0;
+}
+
+.dono-marca {
+  margin: 0;
+  color: var(--laranja);
+  font-weight: 700;
+  font-size: 0.8125rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.dono-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: center;
+}
+
+.dono-escolha {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  border: 1px dashed var(--linha);
+  border-radius: var(--raio);
+}
+
+.dono-grade {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.dono-bloco {
+  padding: 18px 20px;
+  border: 1px solid var(--linha);
+  border-radius: var(--raio);
+  background: var(--superficie);
+}
+
+.dono-bloco h2 {
+  margin: 0 0 12px;
+  font-size: 1rem;
+  color: var(--texto-2);
+}
+
+.dono-numeros {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 14px;
+  margin: 0;
+}
+
+.dono-numeros dt {
+  font-size: 0.8125rem;
+  color: var(--texto-2);
+}
+
+.dono-numeros dd {
+  margin: 2px 0 0;
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: var(--marinho);
+}
+
+.dono-numeros .destaque dd {
+  font-size: 1.875rem;
+}
+
+.dono-numeros .alerta dd {
+  color: var(--erro);
+}
+
+.dono-numeros p {
+  margin: 0;
+}
+
+.dono-tecnicos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.dono-tecnicos li {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding-left: 10px;
+  border-left: 3px solid var(--linha);
+}
+
+.dono-tecnicos li.ativo {
+  border-left-color: var(--laranja);
+}
+
+.dono-tecnicos p {
+  margin: 2px 0 0;
+}
+
+.dono-tecnicos .avatar {
+  width: 40px;
+  height: 40px;
+}
+
+.dono-funil {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.dono-funil li {
+  display: grid;
+  grid-template-columns: 140px 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.dono-funil-barra {
+  height: 14px;
+  background: var(--papel);
+  border-radius: 7px;
+  overflow: hidden;
+}
+
+.dono-funil-barra > span {
+  display: block;
+  height: 100%;
+  background: var(--marinho);
+}
+
+.dono-funil li:last-child .dono-funil-barra > span {
+  background: var(--laranja);
+}
+
+.dono-funil-valor {
+  font-weight: 700;
+  min-width: 70px;
+  text-align: right;
+}
+
+.dono-funil-valor small {
+  font-weight: 400;
+  color: var(--texto-2);
+}
+
+/* Modo TV: tela inteira, letras grandes, fundo escuro */
+.dono-tv {
+  max-width: none;
+  min-height: 100vh;
+  padding: 32px 40px;
+  background: var(--marinho);
+  color: #fff;
+}
+
+.dono-tv .dono-topo h1,
+.dono-tv .dono-numeros dd,
+.dono-tv .dono-tecnicos strong {
+  color: #fff;
+}
+
+.dono-tv .dono-bloco {
+  background: #1a3053;
+  border-color: #2b4570;
+}
+
+.dono-tv .dono-bloco h2,
+.dono-tv .dono-numeros dt,
+.dono-tv .fraco {
+  color: #b8c4d6;
+}
+
+.dono-tv .dono-numeros dd {
+  font-size: 2rem;
+}
+
+.dono-tv .dono-numeros .destaque dd {
+  font-size: 2.6rem;
+}
+
+.dono-tv .dono-numeros .alerta dd {
+  color: #ffb08a;
+}
+
+.dono-tv .dono-funil-barra {
+  background: #2b4570;
+}
+
+.dono-tv .dono-funil-barra > span {
+  background: #c9d2df;
+}
+
+.dono-tv .dono-funil li:last-child .dono-funil-barra > span {
+  background: var(--laranja);
+}
+
+.dono-tv a {
+  color: #ffd2b0;
+}
+
+.dono-sair-tv {
+  opacity: 0.5;
+}
+
+.dono-bloqueado .dono-falta {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.dono-bloqueado .dono-falta li::before {
+  content: '○ ';
+}
+
+.dono-bloqueado .dono-falta li.ok::before {
+  content: '✓ ';
+  color: var(--certo);
+}

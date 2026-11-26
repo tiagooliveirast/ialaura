@@ -235,7 +235,7 @@ export async function enviarLembretesVencidos(limite = 200): Promise<{ enviados:
 }
 
 /** Aviso imediato ao cliente quando o técnico toca "Estou indo". */
-export async function avisarTecnicoACaminho(atendimentoId: string): Promise<void> {
+export async function avisarTecnicoACaminho(atendimentoId: string, minutos: number | null = null): Promise<void> {
   const sb = supabaseAdmin()
   const { data } = await sb
     .from('atendimentos')
@@ -255,11 +255,11 @@ export async function avisarTecnicoACaminho(atendimentoId: string): Promise<void
   ])
   if (!conta || conta.status !== 'ativa' || !empresa) return
 
-  await enviarModelo(conta.phone_number_id, a.cliente.telefone, MODELOS.tecnicoACaminho.nome, [
-    primeiroNome(a.cliente.nome),
-    primeiroNome(a.tecnico?.nome ?? 'responsável'),
-    empresa.nome,
-  ])
+  const base = [primeiroNome(a.cliente.nome), primeiroNome(a.tecnico?.nome ?? 'responsável'), empresa.nome]
+  const modelo = minutos ? MODELOS.tecnicoACaminhoPrevisao : MODELOS.tecnicoACaminho
+  const p = minutos ? [...base, minutos >= 60 ? '1 hora' : `${minutos} minutos`] : base
+  const waId = await enviarModelo(conta.phone_number_id, a.cliente.telefone, modelo.nome, p)
+  await registrarNaConversa(sb, a.empresa_id, a.cliente.telefone, textoDoModelo(modelo.texto, p), waId)
 }
 
 /** Cobrança por Pix logo depois do serviço. Chamada pelo app do técnico, depois que o banco conferiu a permissão. */
@@ -288,4 +288,28 @@ export async function enviarCobrancaPix(atendimentoId: string): Promise<void> {
   const p = [primeiroNome(a.cliente.nome), empresa.nome, reais(a.valor_centavos), c.pix_chave, c.pix_nome || empresa.nome]
   const waId = await enviarModelo(conta.phone_number_id, a.cliente.telefone, MODELOS.cobrancaPix.nome, p)
   await registrarNaConversa(sb, a.empresa_id, a.cliente.telefone, textoDoModelo(MODELOS.cobrancaPix.texto, p), waId)
+}
+
+/** Orçamento por escrito no WhatsApp do cliente, com botão para aprovar. Chamado pelo app do técnico depois da checagem do banco. */
+export async function enviarOrcamentoParaAprovar(atendimentoId: string, servico: string): Promise<void> {
+  const sb = supabaseAdmin()
+  const { data } = await sb
+    .from('atendimentos')
+    .select('empresa_id, orcamento_centavos, cliente:clientes(nome, telefone)')
+    .eq('id', atendimentoId)
+    .single()
+  const a = data as unknown as {
+    empresa_id: string
+    orcamento_centavos: number | null
+    cliente: { nome: string; telefone: string } | null
+  } | null
+  if (!a?.cliente || !a.orcamento_centavos) return
+  const [{ data: conta }, { data: empresa }] = await Promise.all([
+    sb.from('whatsapp_contas').select('phone_number_id, status').eq('empresa_id', a.empresa_id).maybeSingle(),
+    sb.from('empresas').select('nome').eq('id', a.empresa_id).single(),
+  ])
+  if (!conta || conta.status !== 'ativa' || !empresa) return
+  const p = [primeiroNome(a.cliente.nome), empresa.nome, servico.replace(/\s+/g, ' ').slice(0, 200), reais(a.orcamento_centavos)]
+  const waId = await enviarModelo(conta.phone_number_id, a.cliente.telefone, MODELOS.orcamentoParaAprovar.nome, p)
+  await registrarNaConversa(sb, a.empresa_id, a.cliente.telefone, textoDoModelo(MODELOS.orcamentoParaAprovar.texto, p), waId)
 }

@@ -88,15 +88,39 @@ export async function salvarTreinamento(form: FormData) {
     .eq('id', membro.empresa_id)
   if (error) redirect(comErro(VOLTA, `Não foi possível salvar: ${error.message}`))
 
-  const servicos = linhas(form, 'servicos').map((nome) => ({ empresa_id: membro.empresa_id, nome }))
+  // "Limpeza de ar-condicionado | 6 meses" → serviço com retorno de manutenção em 6 meses.
+  const servicos = linhas(form, 'servicos').map((l) => {
+    const [nome, retorno] = l.split('|').map((p) => p.trim())
+    const meses = Number(/(\d{1,2})/.exec(retorno ?? '')?.[1])
+    return { nome: nome!.slice(0, 120), retorno_meses: meses >= 1 && meses <= 36 ? meses : null }
+  }).filter((x) => x.nome)
   const areas = linhas(form, 'areas').map((l) => {
     const [bairro, cidade] = l.split(',').map((p) => p.trim())
     return cidade
       ? { empresa_id: membro.empresa_id, bairro: bairro || null, cidade }
       : { empresa_id: membro.empresa_id, bairro: null, cidade: bairro! }
   })
-  const r1 = await sb.from('servicos').delete().eq('empresa_id', membro.empresa_id)
-  const r2 = servicos.length ? await sb.from('servicos').insert(servicos) : { error: null }
+  // Serviços: atualiza os que já existem, cria os novos e desliga (sem apagar) os que saíram da lista.
+  // Assim o histórico das visitas continua ligado ao serviço.
+  const { data: existentes } = await sb.from('servicos').select('id, nome').eq('empresa_id', membro.empresa_id)
+  const porNome = new Map((existentes ?? []).map((x) => [x.nome.toLowerCase(), x.id as string]))
+  const manter = new Set<string>()
+  let r1: { error: { message: string } | null } = { error: null }
+  const novos: Array<{ empresa_id: string; nome: string; retorno_meses: number | null }> = []
+  for (const sv of servicos) {
+    const id = porNome.get(sv.nome.toLowerCase())
+    if (id) {
+      manter.add(id)
+      const r = await sb.from('servicos').update({ ativo: true, retorno_meses: sv.retorno_meses }).eq('id', id)
+      if (r.error) r1 = r
+    } else novos.push({ empresa_id: membro.empresa_id, ...sv })
+  }
+  const sair = (existentes ?? []).filter((x) => !manter.has(x.id)).map((x) => x.id)
+  if (sair.length) {
+    const r = await sb.from('servicos').update({ ativo: false }).in('id', sair)
+    if (r.error) r1 = r
+  }
+  const r2 = novos.length ? await sb.from('servicos').insert(novos) : { error: null }
   const r3 = await sb.from('areas_atendimento').delete().eq('empresa_id', membro.empresa_id)
   const r4 = areas.length ? await sb.from('areas_atendimento').insert(areas) : { error: null }
   const falha = r1.error ?? r2.error ?? r3.error ?? r4.error

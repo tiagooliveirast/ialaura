@@ -53,7 +53,7 @@ export default async function TreinarLaura({ searchParams }: { searchParams: Pro
 
   const [{ data: dados }, { data: servicos }, { data: areas }, { data: licoesDados }] = await Promise.all([
     sb.from('empresas').select('valor_visita_centavos, conhecimento').eq('id', empresa.id).single(),
-    sb.from('servicos').select('nome').eq('empresa_id', empresa.id).order('nome'),
+    sb.from('servicos').select('nome, retorno_meses').eq('empresa_id', empresa.id).eq('ativo', true).order('nome'),
     sb.from('areas_atendimento').select('bairro, cidade').eq('empresa_id', empresa.id),
     sb
       .from('licoes')
@@ -163,8 +163,17 @@ export default async function TreinarLaura({ searchParams }: { searchParams: Pro
               <div className="formulario">
                 <label className="campo">
                   <span>Serviços e aparelhos, um por linha</span>
-                  <textarea name="servicos" rows={6} defaultValue={(servicos ?? []).map((s) => s.nome).join('\n')} />
-                  <small>Por exemplo: Conserto de geladeira, Instalação de ar-condicionado split, Higienização de máquina de lavar.</small>
+                  <textarea
+                    name="servicos"
+                    rows={6}
+                    defaultValue={(servicos ?? [])
+                      .map((s) => (s.retorno_meses ? `${s.nome} | ${s.retorno_meses} meses` : s.nome))
+                      .join('\n')}
+                  />
+                  <small>
+                    Por exemplo: Conserto de geladeira. Para serviços que se repetem, escreva de quantos em quantos meses depois de uma
+                    barra: &quot;Limpeza de ar-condicionado | 6 meses&quot;. A Laura chama o cliente de volta quando chegar a hora.
+                  </small>
                 </label>
                 <Campo
                   nome="precos"

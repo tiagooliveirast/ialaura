@@ -114,6 +114,11 @@ export default async function PaginaAssinatura({
 
       {!a?.isenta && a?.status !== 'ativa' && (
         <form action={assinar} style={{ marginTop: 24 }}>
+          <p className="comparacao">
+            Dá cerca de <span className="numero">{reais(Math.round(valor / 30))}</span> por dia. Uma atendente com carteira assinada
+            custa mais de R$ 2.500 por mês com os encargos e trabalha 8 horas por dia. A Laura responde a qualquer hora, inclusive
+            à noite e no fim de semana, quando o cliente mais procura.
+          </p>
           <button className="botao">Assinar pelo Mercado Pago</button>
           <p className="fraco" style={{ marginTop: 8 }}>
             Cobrança mensal no cartão. Ao adicionar um técnico, a próxima fatura já vem com ele. Ao remover, ele ainda
