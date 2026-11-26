@@ -1,12 +1,12 @@
 import { hojeEm, PERIODOS, reais, ROTULO_PERIODO, type Periodo } from '@ialaura/shared'
 import type { supabaseAdmin } from '@/lib/supabase/admin'
-
-type SupabaseClient = ReturnType<typeof supabaseAdmin>
 import { descreverVaga, proximosDias, vagasDisponiveis, type Vaga } from './agenda'
-import { lerConhecimento } from './conhecimento'
+import { lerConhecimento, PERGUNTAR_ANTES, TRANSFERIR_QUANDO, type Conhecimento } from './conhecimento'
 import { custoMicroUsd, perguntar, type Ferramenta, type MensagemIA } from './ia'
 
-type Empresa = {
+type SupabaseClient = ReturnType<typeof supabaseAdmin>
+
+export type EmpresaIA = {
   id: string
   nome: string
   cidade: string | null
@@ -20,7 +20,10 @@ export type ResultadoAtendente = {
   resposta: string | null
   passouParaHumano: boolean
   atendimentoCriado: string | null
+  acoes: string[]
 }
+
+export type Turno = { autor: 'cliente' | 'laura'; texto: string }
 
 const FERRAMENTAS: Ferramenta[] = [
   {
@@ -38,7 +41,7 @@ const FERRAMENTAS: Ferramenta[] = [
           referencia: { type: 'string', description: 'Ponto de referência, se o cliente informou' },
           data: { type: 'string', description: 'AAAA-MM-DD, exatamente como na lista de vagas' },
           periodo: { type: 'string', enum: [...PERIODOS] },
-          descricao: { type: 'string', description: 'Aparelho e o problema relatado pelo cliente' },
+          descricao: { type: 'string', description: 'Aparelho, marca, modelo e o problema relatado pelo cliente' },
         },
         required: ['nome', 'endereco', 'data', 'periodo', 'descricao'],
       },
@@ -49,107 +52,154 @@ const FERRAMENTAS: Ferramenta[] = [
     function: {
       name: 'passar_para_humano',
       description:
-        'Passa a conversa para uma pessoa da empresa e para de responder. Use quando o cliente pedir para falar com alguém, reclamar, perguntar algo que não está nas informações da empresa, ou pedir diagnóstico, orçamento de conserto ou preço de peça.',
-      parameters: {
-        type: 'object',
-        properties: { motivo: { type: 'string' } },
-        required: ['motivo'],
-      },
+        'Passa a conversa para uma pessoa da empresa e para de responder. Use nas situações listadas em QUANDO PASSAR PARA A EQUIPE, quando o cliente pedir para falar com alguém, ou quando a pergunta não estiver respondida nas informações da empresa.',
+      parameters: { type: 'object', properties: { motivo: { type: 'string' } }, required: ['motivo'] },
     },
   },
 ]
 
-function instrucoes(empresa: Empresa, servicos: string[], areas: string[], vagas: Vaga[], hoje: string): string {
+const TOM: Record<NonNullable<Conhecimento['tom']>, string> = {
+  proximo: 'educado e próximo, como uma boa atendente de balcão; trate o cliente por "você"',
+  formal: 'formal e cordial; trate o cliente por "o senhor" ou "a senhora" até ele pedir o contrário',
+  descontraido: 'leve e descontraído, sem perder a educação; trate o cliente por "você"',
+}
+
+function linha(rotulo: string, valor: string | undefined | null): string {
+  return valor ? `- ${rotulo}: ${valor}` : ''
+}
+
+export function montarInstrucoes(
+  empresa: EmpresaIA,
+  servicos: string[],
+  areas: string[],
+  vagas: Vaga[],
+  hoje: string,
+): string {
   const c = lerConhecimento(empresa.conhecimento)
-  const linhas = [
-    `Você é a Laura, atendente da empresa "${empresa.nome}", uma assistência técnica${empresa.cidade ? ` em ${empresa.cidade}${empresa.uf ? `-${empresa.uf}` : ''}` : ''}.`,
-    'Você responde clientes pelo WhatsApp. Seu trabalho é atender bem e marcar a visita técnica.',
+  const nome = c.nome_assistente || 'Laura'
+  const onde = empresa.cidade ? ` em ${empresa.cidade}${empresa.uf ? `-${empresa.uf}` : ''}` : ''
+  const perguntar = (c.perguntar_antes ?? []).map((k) => PERGUNTAR_ANTES.find(([x]) => x === k)?.[1]).filter(Boolean)
+  const transferir = (c.transferir_quando ?? []).map((k) => TRANSFERIR_QUANDO.find(([x]) => x === k)?.[1]).filter(Boolean)
+
+  const partes = [
+    `Você é ${nome}, atendente da empresa "${empresa.nome}", uma assistência técnica${onde}.`,
+    'Você responde clientes pelo WhatsApp. Seu trabalho é tirar dúvidas de atendimento e marcar a visita técnica.',
     '',
-    'REGRAS',
-    '- Escreva como uma atendente de balcão educada: mensagens curtas, uma ou duas frases, sem listas longas e sem emojis em excesso.',
-    '- Use SOMENTE as informações abaixo. Se o cliente perguntar algo que não está aqui, diga que vai verificar com a equipe e chame passar_para_humano.',
-    '- Nunca dê diagnóstico, nunca diga o que pode ser o defeito, nunca passe preço de conserto ou de peça. Explique que o técnico avalia na visita.',
-    '- Nunca invente horário. Ofereça só os horários da lista de vagas.',
-    '- Para marcar: pergunte o aparelho e o problema, ofereça até 3 horários, peça nome e endereço com número e bairro. Depois chame marcar_visita.',
+    'COMO ESCREVER',
+    `- Tom: ${TOM[c.tom ?? 'proximo']}.`,
+    '- Mensagens curtas: no máximo três frases. Uma pergunta por vez.',
+    c.emojis ? '- Pode usar um emoji de vez em quando, sem exagero.' : '- Não use emojis.',
+    c.saudacao ? `- Na primeira mensagem da conversa, cumprimente assim (pode adaptar): "${c.saudacao}"` : '',
+    '',
+    'REGRAS QUE VOCÊ NUNCA QUEBRA',
+    '- Use SOMENTE as informações abaixo. Se não estiver aqui, diga que vai confirmar com a equipe e chame passar_para_humano.',
+    '- Nunca dê diagnóstico, nunca diga qual pode ser o defeito. Diga que o técnico avalia na visita.',
+    '- Nunca invente preço, prazo, desconto ou horário. Ofereça só os horários da lista de vagas.',
+    '- Não fale de assuntos fora do atendimento da empresa.',
+    c.proibido ? `- Nunca diga ou prometa: ${c.proibido}` : '',
+    '',
+    'PARA MARCAR A VISITA',
+    '- Pergunte qual é o aparelho e o que está acontecendo.',
+    perguntar.length ? `- Antes de marcar, pergunte também: ${perguntar.join('; ')}.` : '',
+    '- Ofereça até 3 horários da lista de vagas.',
+    '- Peça nome e endereço com número e bairro. Depois chame marcar_visita.',
     '- Depois de marcar, confirme o dia e o período em uma frase.',
-    '- Se o cliente pedir para falar com uma pessoa, chame passar_para_humano.',
+    '',
+    'QUANDO PASSAR PARA A EQUIPE (chame passar_para_humano)',
+    '- O cliente pede para falar com uma pessoa.',
+    ...transferir.map((t) => `- ${t}.`),
+    c.transferir_extra ? `- ${c.transferir_extra}` : '',
     '',
     `HOJE: ${hoje}`,
     '',
-    'INFORMAÇÕES DA EMPRESA',
-    empresa.valor_visita_centavos != null
-      ? `- Valor da visita técnica: ${reais(empresa.valor_visita_centavos)}`
-      : '- Valor da visita: não informado (se perguntarem, passe para humano).',
-    servicos.length ? `- Serviços e aparelhos: ${servicos.join('; ')}` : '- Serviços: não informados.',
-    areas.length ? `- Atende em: ${areas.join('; ')}` : '- Área de atendimento: não informada (se perguntarem, passe para humano).',
-    c.pagamento ? `- Formas de pagamento: ${c.pagamento}` : '',
-    c.garantia ? `- Garantia: ${c.garantia}` : '',
-    c.horario ? `- Horário de atendimento: ${c.horario}` : '',
-    c.observacoes ? `- Outras informações: ${c.observacoes}` : '',
+    'SOBRE A EMPRESA',
+    linha('Quem somos', c.descricao),
+    linha('Diferenciais', c.diferenciais),
+    linha('Tempo de mercado', c.anos_mercado),
+    c.endereco_oficina
+      ? `- Endereço: ${c.endereco_oficina}${c.atende_na_oficina ? ' (o cliente também pode levar o aparelho até lá)' : ' (atendimento só a domicílio)'}`
+      : '',
+    linha('Site', c.site),
+    linha('Instagram', c.instagram),
     '',
+    'SERVIÇOS, MARCAS E PREÇOS',
+    servicos.length ? `- Serviços e aparelhos: ${servicos.join('; ')}` : '- Serviços: não informados (pergunte à equipe).',
+    linha('Marcas atendidas', c.marcas),
+    linha('NÃO atendemos', c.nao_atende),
+    c.precos ? `- Preços que você pode informar (só estes):\n${c.precos}` : '- Preço de serviço: não informe; diga que o técnico passa o orçamento na visita.',
+    '',
+    'VISITA TÉCNICA',
+    empresa.valor_visita_centavos != null
+      ? `- Valor da visita: ${reais(empresa.valor_visita_centavos)}${c.visita_descontada ? ', descontado do serviço se o cliente aprovar o conserto' : ''}.`
+      : '- Valor da visita: não informado (se perguntarem, passe para a equipe).',
+    linha('Taxa ou regra por região', c.taxa_regiao),
+    areas.length ? `- Atendemos em: ${areas.join('; ')}` : '- Área de atendimento: não informada (se perguntarem, passe para a equipe).',
+    linha('Prazo para atender', c.prazo),
+    linha('Urgência e mesmo dia', c.urgencia),
+    '',
+    'CONDIÇÕES',
+    linha('Formas de pagamento', c.pagamento),
+    linha('Garantia', c.garantia),
+    linha('Horário de atendimento', c.horario),
+    linha('Se o cliente chamar fora do horário', c.fora_horario),
+    linha('Cancelamento e remarcação', c.cancelamento),
+    linha('Orçamento', c.orcamento),
+    linha('Outras informações', c.observacoes),
+    '',
+    ...(c.faq?.length
+      ? ['PERGUNTAS FREQUENTES (responda com estas palavras, adaptando ao contexto)', ...c.faq.map((f) => `- P: ${f.pergunta}\n  R: ${f.resposta}`), '']
+      : []),
     'VAGAS DISPONÍVEIS (data AAAA-MM-DD | período)',
     ...(vagas.length
       ? vagas.slice(0, 12).map((v) => `- ${v.data} | ${v.periodo} (${descreverVaga(v)})`)
-      : ['- Nenhuma vaga nos próximos dias. Diga que a agenda está cheia e passe para humano.']),
+      : ['- Nenhuma vaga nos próximos dias. Diga que a agenda está cheia e passe para a equipe.']),
   ]
-  return linhas.filter((l) => l !== '').join('\n')
+  return partes.filter((l) => l !== '').join('\n')
 }
 
-/**
- * Lê a conversa, pergunta à IA e executa as ferramentas que ela pedir.
- * Usa o cliente service_role: quem chama já garantiu que a conversa é da empresa.
- */
-export async function atender(
-  sb: SupabaseClient,
-  empresa: Empresa,
-  conversa: { id: string; wa_telefone: string },
-): Promise<ResultadoAtendente> {
+async function contexto(sb: SupabaseClient, empresa: EmpresaIA) {
   const hoje = hojeEm(empresa.fuso)
   const c = lerConhecimento(empresa.conhecimento)
-
-  const [{ data: servicos }, { data: areas }, { data: historico }] = await Promise.all([
+  const [{ data: servicos }, { data: areas }] = await Promise.all([
     sb.from('servicos').select('nome, aparelho').eq('empresa_id', empresa.id).eq('ativo', true),
     sb.from('areas_atendimento').select('cidade, bairro').eq('empresa_id', empresa.id),
-    sb
-      .from('mensagens')
-      .select('autor, conteudo')
-      .eq('conversa_id', conversa.id)
-      .order('criado_em', { ascending: false })
-      .limit(20),
   ])
-
   const vagas = await vagasDisponiveis(sb, empresa.id, proximosDias(hoje, 7, c).filter((d) => d > hoje))
+  const sistema = montarInstrucoes(
+    empresa,
+    (servicos ?? []).map((s) => [s.nome, s.aparelho].filter(Boolean).join(' - ')),
+    (areas ?? []).map((a) => [a.bairro, a.cidade].filter(Boolean).join(', ')),
+    vagas,
+    hoje,
+  )
+  return { sistema, vagas }
+}
 
+type Executor = (nome: string, args: Record<string, unknown>, vagas: Vaga[]) => Promise<{ resultado: string; acao?: string; atendimentoId?: string; humano?: boolean }>
+
+/** Laço da conversa com o modelo: até 3 rodadas de ferramenta. */
+async function conversar(
+  sb: SupabaseClient,
+  empresa: EmpresaIA,
+  turnos: Turno[],
+  executar: Executor,
+  conversaId: string | null,
+): Promise<ResultadoAtendente> {
+  const { sistema, vagas } = await contexto(sb, empresa)
   const mensagens: MensagemIA[] = [
-    {
-      role: 'system',
-      content: instrucoes(
-        empresa,
-        (servicos ?? []).map((s) => [s.nome, s.aparelho].filter(Boolean).join(' - ')),
-        (areas ?? []).map((a) => [a.bairro, a.cidade].filter(Boolean).join(', ')),
-        vagas,
-        hoje,
-      ),
-    },
-    ...(historico ?? [])
-      .reverse()
-      .filter((m) => m.conteudo)
-      .map(
-        (m): MensagemIA =>
-          m.autor === 'cliente'
-            ? { role: 'user', content: m.conteudo as string }
-            : { role: 'assistant', content: m.conteudo as string },
-      ),
+    { role: 'system', content: sistema },
+    ...turnos.map((t): MensagemIA => (t.autor === 'cliente' ? { role: 'user', content: t.texto } : { role: 'assistant', content: t.texto })),
   ]
 
   let passouParaHumano = false
   let atendimentoCriado: string | null = null
+  const acoes: string[] = []
 
   for (let rodada = 0; rodada < 3; rodada++) {
     const r = await perguntar(mensagens, FERRAMENTAS)
     await sb.from('uso_ia').insert({
       empresa_id: empresa.id,
-      conversa_id: conversa.id,
+      conversa_id: conversaId,
       modelo: r.modelo,
       tokens_entrada: r.tokensEntrada,
       tokens_saida: r.tokensSaida,
@@ -158,9 +208,8 @@ export async function atender(
 
     const chamadas = r.mensagem.tool_calls ?? []
     if (chamadas.length === 0) {
-      return { resposta: r.mensagem.content?.trim() || null, passouParaHumano, atendimentoCriado }
+      return { resposta: r.mensagem.content?.trim() || null, passouParaHumano, atendimentoCriado, acoes }
     }
-
     mensagens.push({ role: 'assistant', content: r.mensagem.content, tool_calls: chamadas })
 
     for (const chamada of chamadas) {
@@ -168,22 +217,13 @@ export async function atender(
       try {
         args = JSON.parse(chamada.function.arguments || '{}')
       } catch {
-        // argumento inválido: a resposta da ferramenta explica o erro para o modelo
+        // argumento inválido: o executor responde com erro para o modelo corrigir
       }
-
-      let resultado: string
-      if (chamada.function.name === 'passar_para_humano') {
-        await sb.from('conversas').update({ estado: 'humano' }).eq('id', conversa.id)
-        passouParaHumano = true
-        resultado = 'Conversa passada para a equipe. Avise o cliente que alguém da empresa vai responder em breve.'
-      } else if (chamada.function.name === 'marcar_visita') {
-        const r2 = await marcarVisita(sb, empresa.id, conversa, args, vagas)
-        if (r2.ok) atendimentoCriado = r2.atendimentoId
-        resultado = r2.mensagem
-      } else {
-        resultado = 'Ferramenta desconhecida.'
-      }
-      mensagens.push({ role: 'tool', tool_call_id: chamada.id, content: resultado })
+      const e = await executar(chamada.function.name, args, vagas)
+      if (e.humano) passouParaHumano = true
+      if (e.atendimentoId) atendimentoCriado = e.atendimentoId
+      if (e.acao) acoes.push(e.acao)
+      mensagens.push({ role: 'tool', tool_call_id: chamada.id, content: e.resultado })
     }
   }
 
@@ -191,7 +231,75 @@ export async function atender(
     resposta: passouParaHumano ? 'Vou passar sua mensagem para a equipe, já já alguém te responde.' : null,
     passouParaHumano,
     atendimentoCriado,
+    acoes,
   }
+}
+
+/** Atendimento real no WhatsApp: lê o histórico do banco e executa as ferramentas de verdade. */
+export async function atender(
+  sb: SupabaseClient,
+  empresa: EmpresaIA,
+  conversa: { id: string; wa_telefone: string },
+): Promise<ResultadoAtendente> {
+  const { data: historico } = await sb
+    .from('mensagens')
+    .select('autor, conteudo')
+    .eq('conversa_id', conversa.id)
+    .order('criado_em', { ascending: false })
+    .limit(20)
+  const turnos: Turno[] = (historico ?? [])
+    .reverse()
+    .filter((m) => m.conteudo)
+    .map((m) => ({ autor: m.autor === 'cliente' ? 'cliente' : 'laura', texto: m.conteudo as string }))
+
+  return conversar(
+    sb,
+    empresa,
+    turnos,
+    async (nome, args, vagas) => {
+      if (nome === 'passar_para_humano') {
+        await sb.from('conversas').update({ estado: 'humano' }).eq('id', conversa.id)
+        return { resultado: 'Conversa passada para a equipe. Avise o cliente que alguém da empresa vai responder em breve.', humano: true }
+      }
+      if (nome === 'marcar_visita') {
+        const r = await marcarVisita(sb, empresa.id, conversa, args, vagas)
+        return r.ok ? { resultado: r.mensagem, atendimentoId: r.atendimentoId } : { resultado: r.mensagem }
+      }
+      return { resultado: 'Ferramenta desconhecida.' }
+    },
+    conversa.id,
+  )
+}
+
+/** Simulação no painel: mesma inteligência, nada é gravado nem enviado. */
+export async function simular(sb: SupabaseClient, empresa: EmpresaIA, turnos: Turno[]): Promise<ResultadoAtendente> {
+  return conversar(
+    sb,
+    empresa,
+    turnos,
+    async (nome, args, vagas) => {
+      if (nome === 'passar_para_humano') {
+        return {
+          resultado: 'Conversa passada para a equipe. Avise o cliente que alguém vai responder em breve.',
+          humano: true,
+          acao: `Passaria a conversa para a equipe (motivo: ${String(args.motivo ?? 'não informado')})`,
+        }
+      }
+      if (nome === 'marcar_visita') {
+        const data = String(args.data ?? '')
+        const periodo = String(args.periodo ?? '') as Periodo
+        if (!vagas.some((v) => v.data === data && v.periodo === periodo)) {
+          return { resultado: 'Esse horário não está na lista de vagas. Ofereça um horário da lista.' }
+        }
+        return {
+          resultado: `Visita marcada para ${descreverVaga({ data, periodo })} (${ROTULO_PERIODO[periodo]}). Confirme ao cliente.`,
+          acao: `Marcaria visita: ${String(args.nome ?? '')}, ${String(args.endereco ?? '')}, ${descreverVaga({ data, periodo })}. ${String(args.descricao ?? '')}`,
+        }
+      }
+      return { resultado: 'Ferramenta desconhecida.' }
+    },
+    null,
+  )
 }
 
 async function marcarVisita(
@@ -213,7 +321,6 @@ async function marcarVisita(
     return { ok: false, mensagem: 'Esse horário não está na lista de vagas. Ofereça um horário da lista.' }
   }
 
-  // Confere de novo: a vaga pode ter acabado durante a conversa.
   const { data: livres } = await sb.rpc('vagas_livres', { p_empresa: empresaId, p_data: data, p_periodo: periodo })
   if (typeof livres !== 'number' || livres < 1) {
     return { ok: false, mensagem: 'Esse horário acabou de ser preenchido. Ofereça outro da lista.' }
@@ -223,10 +330,7 @@ async function marcarVisita(
   const referencia = texto('referencia')
   const { data: cliente, error: erroCliente } = await sb
     .from('clientes')
-    .upsert(
-      { empresa_id: empresaId, telefone: conversa.wa_telefone, nome, endereco, bairro },
-      { onConflict: 'empresa_id,telefone' },
-    )
+    .upsert({ empresa_id: empresaId, telefone: conversa.wa_telefone, nome, endereco, bairro }, { onConflict: 'empresa_id,telefone' })
     .select('id')
     .single<{ id: string }>()
   if (erroCliente || !cliente) return { ok: false, mensagem: 'Erro ao salvar o cliente. Passe para humano.' }
@@ -240,7 +344,6 @@ async function marcarVisita(
   if (error || !atendimento) return { ok: false, mensagem: 'Erro ao marcar. Passe para humano.' }
 
   await sb.from('conversas').update({ cliente_id: cliente.id }).eq('id', conversa.id)
-
   return {
     ok: true,
     atendimentoId: atendimento.id,

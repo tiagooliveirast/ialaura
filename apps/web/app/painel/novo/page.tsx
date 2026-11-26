@@ -14,7 +14,7 @@ export default async function Novo({ searchParams }: { searchParams: Promise<{ e
   return (
     <div className="estreito sem-topo">
       <p>
-        <Link href="/painel" className="voltar">
+        <Link href="/painel/atendimentos" className="voltar">
           Voltar para atendimentos
         </Link>
       </p>

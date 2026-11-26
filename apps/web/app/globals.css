@@ -782,3 +782,199 @@ a {
 .sem-sublinhado {
   text-decoration: none;
 }
+
+/* ───────── Treinar a Laura */
+.treino-grade {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 1fr);
+  gap: 24px;
+  margin-top: 20px;
+  align-items: start;
+}
+
+.treino-lado {
+  position: sticky;
+  top: 16px;
+}
+
+.sem-borda {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+
+.bloco-treino {
+  background: var(--superficie);
+  border: 1px solid var(--linha);
+  border-radius: var(--raio-painel);
+  padding: 0 18px;
+  margin-bottom: 12px;
+}
+
+.bloco-treino summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: baseline;
+  padding: 14px 0;
+  cursor: pointer;
+  color: var(--marinho);
+}
+
+.bloco-treino[open] summary {
+  border-bottom: 1px solid var(--linha);
+}
+
+.bloco-treino .formulario {
+  margin: 16px 0 18px;
+}
+
+.marcar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.marcar input,
+.opcoes input {
+  accent-color: var(--marinho);
+}
+
+.opcoes.coluna {
+  flex-direction: column;
+  gap: 6px;
+}
+
+.faq-par {
+  display: grid;
+  gap: 6px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed var(--linha);
+}
+
+.salvar-fixo {
+  position: sticky;
+  bottom: 0;
+  padding: 12px 0;
+  background: linear-gradient(transparent, var(--papel) 30%);
+}
+
+.completude {
+  min-width: 160px;
+  text-align: right;
+}
+
+.completude .numero {
+  font-family: var(--fonte-titulo);
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--marinho);
+}
+
+.barra-progresso {
+  height: 6px;
+  background: #e5e0d4;
+  border-radius: 3px;
+  overflow: hidden;
+  margin: 4px 0;
+}
+
+.barra-progresso div {
+  height: 100%;
+  background: var(--certo);
+}
+
+/* Simulador */
+.simulador {
+  overflow: hidden;
+}
+
+.simulador-topo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: baseline;
+  padding: 12px 14px;
+  background: var(--marinho);
+  color: #fff;
+}
+
+.simulador-topo .fraco {
+  color: #c9d2df;
+  font-size: 0.8125rem;
+}
+
+.simulador-topo .link-botao {
+  margin-left: auto;
+  color: #fff;
+}
+
+.simulador-mensagens {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  min-height: 320px;
+  max-height: 60vh;
+}
+
+.simulador-vazio {
+  display: grid;
+  gap: 6px;
+}
+
+.sugestao {
+  text-align: left;
+  padding: 8px 10px;
+  border: 1px solid #b9b2a3;
+  border-radius: var(--raio);
+  background: var(--superficie);
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.balao-cliente {
+  align-self: flex-start;
+}
+
+.balao-sistema {
+  align-self: center;
+  max-width: 92%;
+  padding: 6px 10px;
+  border-radius: var(--raio);
+  background: #fbf3e4;
+  border: 1px solid #e8d3a8;
+  color: #7a4f10;
+  font-size: 0.8125rem;
+}
+
+.digitando {
+  color: var(--texto-2);
+  font-style: italic;
+}
+
+.simulador-envio {
+  display: flex;
+  gap: 8px;
+  padding: 10px;
+  border-top: 1px solid var(--linha);
+  background: var(--superficie);
+}
+
+.simulador-envio input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #b9b2a3;
+  border-radius: var(--raio);
+  font: inherit;
+}
+
+@media (max-width: 960px) {
+  .treino-grade {
+    grid-template-columns: 1fr;
+  }
+  .treino-lado {
+    position: static;
+  }
+}

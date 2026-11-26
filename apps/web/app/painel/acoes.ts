@@ -56,8 +56,9 @@ export async function criarAtendimento(form: FormData) {
   })
   if (error) redirect(comErro('/painel/novo', `Não foi possível marcar a visita: ${error.message}`))
 
+  revalidatePath('/painel/atendimentos')
   revalidatePath('/painel')
-  redirect('/painel')
+  redirect('/painel/atendimentos')
 }
 
 export async function mudarStatus(form: FormData) {
@@ -65,7 +66,7 @@ export async function mudarStatus(form: FormData) {
   const id = String(form.get('id') ?? '')
   const status = String(form.get('status') ?? '') as StatusAtendimento
   if (!id || !STATUS_ATENDIMENTO.includes(status)) {
-    redirect(comErro('/painel', 'Status inválido. Atualize a página e tente de novo.'))
+    redirect(comErro('/painel/atendimentos', 'Status inválido. Atualize a página e tente de novo.'))
   }
 
   const tecnico = String(form.get('tecnico') ?? '')
@@ -74,6 +75,7 @@ export async function mudarStatus(form: FormData) {
 
   // RLS garante que só altera atendimento da própria empresa.
   const { error } = await sb.from('atendimentos').update(mudanca).eq('id', id)
-  if (error) redirect(comErro('/painel', `Não foi possível mudar o status: ${error.message}`))
+  if (error) redirect(comErro('/painel/atendimentos', `Não foi possível mudar o status: ${error.message}`))
+  revalidatePath('/painel/atendimentos')
   revalidatePath('/painel')
 }
