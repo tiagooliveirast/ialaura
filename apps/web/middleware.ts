@@ -2,11 +2,13 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { supabaseAnonKey, supabaseUrl } from '@/lib/supabase/config'
 
-const PROTEGIDAS = ['/painel', '/comecar', '/tecnico']
+const PROTEGIDAS = ['/painel', '/comecar', '/tecnico', '/admin']
 
 // Renova a sessão a cada navegação e barra quem não está logado nas áreas internas.
 export async function middleware(req: NextRequest) {
-  let res = NextResponse.next({ request: req })
+  const cabecalhos = new Headers(req.headers)
+  cabecalhos.set('x-caminho', req.nextUrl.pathname)
+  let res = NextResponse.next({ request: { headers: cabecalhos } })
   const url = supabaseUrl()
   const chave = supabaseAnonKey()
   if (!url || !chave) return res
@@ -16,7 +18,7 @@ export async function middleware(req: NextRequest) {
       getAll: () => req.cookies.getAll(),
       setAll: (lista) => {
         for (const { name, value } of lista) req.cookies.set(name, value)
-        res = NextResponse.next({ request: req })
+        res = NextResponse.next({ request: { headers: cabecalhos } })
         for (const { name, value, options } of lista) res.cookies.set(name, value, options)
       },
     },

@@ -122,6 +122,11 @@ export default async function Equipe({ searchParams }: { searchParams: Promise<{
           <input name="email" type="email" required autoComplete="off" />
         </label>
         <label className="campo">
+          <span>WhatsApp, com DDD</span>
+          <input name="telefone" type="tel" inputMode="tel" autoComplete="off" />
+          <small>Usado para avisar o técnico das manutenções programadas.</small>
+        </label>
+        <label className="campo">
           <span>Função</span>
           <select name="papel" defaultValue="tecnico">
             <option value="tecnico">Técnico: vê só a agenda dele, sem telefone do cliente</option>

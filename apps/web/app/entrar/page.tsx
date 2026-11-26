@@ -20,6 +20,11 @@ export default async function Entrar({
           {erro}
         </p>
       )}
+      {aviso === 'bloqueado' && (
+        <p className="aviso" role="status">
+          O acesso da sua empresa está pausado. Fale com o responsável.
+        </p>
+      )}
       {aviso === 'confirme' && (
         <p className="aviso" role="status">
           Conta criada. Abra o link que enviamos para o seu e-mail e depois entre aqui.

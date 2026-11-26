@@ -10,7 +10,7 @@ import {
 } from '@ialaura/shared'
 import { exigirMembro } from '@/lib/sessao'
 import { sair } from '../entrar/acoes'
-import { informarStatus } from './acoes'
+import { BotoesStatus } from './BotoesStatus'
 
 export const metadata: Metadata = { title: 'Minha agenda' }
 
@@ -60,6 +60,7 @@ export default async function Tecnico({ searchParams }: { searchParams: Promise<
       <main className="estreito sem-margem">
         <h1>Minha agenda</h1>
         <p className="apoio">Próximos 7 dias.</p>
+        <p className="fraco">Ao tocar nos botões, a posição do celular é registrada para a empresa acompanhar as visitas.</p>
 
         {(erro || error) && (
           <p className="aviso aviso-erro" role="alert">
@@ -81,16 +82,7 @@ export default async function Tecnico({ searchParams }: { searchParams: Promise<
                 <p className="fraco">{[v.endereco, v.bairro, v.cidade].filter(Boolean).join(', ') || 'Endereço não informado'}</p>
                 {(v.servico || v.descricao) && <p className="visita-descricao">{[v.servico, v.descricao].filter(Boolean).join(': ')}</p>}
 
-                {PROXIMOS[v.status] && (
-                  <form action={informarStatus} className="visita-acoes">
-                    <input type="hidden" name="id" value={v.id} />
-                    {PROXIMOS[v.status]!.map(([status, rotulo], i) => (
-                      <button key={status} name="status" value={status} className={i === 0 ? 'botao' : 'botao botao-claro'}>
-                        {rotulo}
-                      </button>
-                    ))}
-                  </form>
-                )}
+                {PROXIMOS[v.status] && <BotoesStatus id={v.id} opcoes={PROXIMOS[v.status]!} />}
               </li>
             ))}
           </ul>

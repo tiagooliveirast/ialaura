@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { enviarTexto } from '@/lib/whatsapp'
+import { empresaLiberada } from '@/lib/cobranca'
 import { atender } from './atendente'
 
 type Evento = {
@@ -70,6 +71,7 @@ async function processarEvento(ev: Evento) {
 
   await sb.from('webhook_eventos').update({ empresa_id: conta.empresa_id }).eq('id', ev.id)
   if (conta.status !== 'ativa') return
+  if (!(await empresaLiberada(conta.empresa_id))) return
 
   const { data: empresa } = await sb
     .from('empresas')

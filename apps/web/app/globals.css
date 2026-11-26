@@ -638,3 +638,83 @@ a {
 .status select {
   min-width: 150px;
 }
+
+/* ───────── Pesquisa de satisfação */
+.escala {
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+
+.escala legend {
+  font-weight: 600;
+  margin-bottom: 10px;
+  padding: 0;
+}
+
+.escala > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.escala label {
+  cursor: pointer;
+}
+
+.escala input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.escala span {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid #b9b2a3;
+  border-radius: var(--raio);
+  background: var(--superficie);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.escala input:checked + span {
+  background: var(--marinho);
+  border-color: var(--marinho);
+  color: #fff;
+}
+
+.escala input:focus-visible + span {
+  outline: 2px solid var(--laranja);
+  outline-offset: 2px;
+}
+
+/* ───────── Resumo (assinatura) */
+.resumo {
+  margin: 20px 0 0;
+  padding: 4px 20px;
+}
+
+.resumo div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--linha);
+}
+
+.resumo div:last-child {
+  border-bottom: 0;
+}
+
+.resumo dt {
+  color: var(--texto-2);
+}
+
+.resumo dd {
+  margin: 0;
+  font-weight: 600;
+  text-align: right;
+}

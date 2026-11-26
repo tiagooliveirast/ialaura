@@ -1,9 +1,11 @@
 'use server'
 
 import { randomInt } from 'node:crypto'
+import { normalizarTelefone } from '@ialaura/shared'
 import { revalidatePath } from 'next/cache'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
+import { ajustarValor } from '@/lib/cobranca'
 import { COOKIE_ACESSO } from '@/lib/equipe'
 import { comErro, exigirMembro } from '@/lib/sessao'
 import { supabaseAdmin } from '@/lib/supabase/admin'
@@ -36,6 +38,7 @@ export async function adicionarPessoa(form: FormData) {
   const nome = String(form.get('nome') ?? '').trim().slice(0, 80)
   const email = String(form.get('email') ?? '').trim().toLowerCase()
   const papel = String(form.get('papel') ?? '')
+  const telefoneBruto = String(form.get('telefone') ?? '').trim()
   if (nome.length < 2) redirect(comErro(VOLTA, 'Informe o nome da pessoa.'))
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) redirect(comErro(VOLTA, 'E-mail inválido.'))
   if (!['tecnico', 'atendente'].includes(papel)) redirect(comErro(VOLTA, 'Escolha se é técnico ou atendente.'))
@@ -67,11 +70,14 @@ export async function adicionarPessoa(form: FormData) {
     papel,
     nome,
     atende: papel === 'tecnico',
+    telefone: telefoneBruto ? normalizarTelefone(telefoneBruto) : null,
   })
   if (error) {
     const msg = /duplicate|unique/i.test(error.message) ? 'Essa pessoa já faz parte da equipe.' : error.message
     redirect(comErro(VOLTA, msg))
   }
+
+  await ajustarValor(membro.empresa_id).catch((e) => console.error('ajustar valor:', e))
 
   // Mostra a senha uma vez só, na próxima tela. Nada de senha na URL.
   const jar = await cookies()
@@ -104,6 +110,7 @@ export async function alterarPessoa(form: FormData) {
   // RLS: só o dono da empresa altera membros dela.
   const { error } = await sb.from('membros').update(mudanca).eq('id', id)
   if (error) redirect(comErro(VOLTA, `Não foi possível alterar: ${error.message}`))
+  await ajustarValor(membro.empresa_id).catch((e) => console.error('ajustar valor:', e))
   revalidatePath(VOLTA)
   revalidatePath('/painel')
 }

@@ -1,0 +1,129 @@
+/* Site público de cada empresa. Mesmo sistema visual da Laura, sem enfeite. */
+.site-faixa {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.site-faixa-estreita {
+  max-width: 560px;
+}
+
+.site-topo {
+  border-bottom: 1px solid var(--linha);
+  background: var(--papel);
+}
+
+.site-topo-dentro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 60px;
+}
+
+.site-marca {
+  font-family: var(--fonte-titulo);
+  font-weight: 800;
+  font-size: 1.125rem;
+  color: var(--marinho);
+}
+
+.site-whats {
+  padding: 8px 14px;
+  border: 1px solid var(--certo);
+  border-radius: var(--raio);
+  color: var(--certo);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.site-abertura {
+  padding-top: 56px;
+  padding-bottom: 48px;
+}
+
+.site-abertura h1 {
+  margin-top: 10px;
+  font-size: clamp(1.875rem, 5vw, 2.875rem);
+  max-width: 20ch;
+}
+
+.site-abertura .apoio {
+  font-size: 1.125rem;
+  max-width: 48ch;
+  margin-top: 14px;
+}
+
+.site h2 {
+  font-size: 1.375rem;
+}
+
+.site-colunas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  padding-top: 32px;
+  padding-bottom: 32px;
+  border-top: 1px solid var(--linha);
+}
+
+.site-lista {
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.site-lista li {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--linha);
+}
+
+.site-detalhes {
+  margin: 14px 0 0;
+}
+
+.site-detalhes div {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--linha);
+}
+
+.site-detalhes dt {
+  font-size: 0.875rem;
+  color: var(--texto-2);
+}
+
+.site-detalhes dd {
+  margin: 2px 0 0;
+  font-weight: 600;
+}
+
+.site-area {
+  padding-top: 32px;
+  padding-bottom: 40px;
+  border-top: 1px solid var(--linha);
+}
+
+.site-area p {
+  margin: 10px 0 0;
+  color: var(--texto-2);
+}
+
+.site-agendar {
+  padding: 56px 0 72px;
+  background: #efebe2;
+  border-top: 1px solid var(--linha);
+}
+
+.site-rodape {
+  padding: 24px 0;
+  font-size: 0.875rem;
+}
+
+@media (max-width: 720px) {
+  .site-colunas {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+}

@@ -53,13 +53,20 @@ docs/           Este documento, design e roteiro
 - Laura no WhatsApp: webhook grava na fila e processa logo depois (`after`); `/api/cron/processar` reprocessa falhas
 - Conversas (`/painel/conversas`): assumir, devolver para a Laura, responder pelo WhatsApp da empresa
 
+- Lembretes: véspera (cliente, 10h), manutenção programada (técnico, 7 dias antes) e pesquisa (dia seguinte à finalização), criados por gatilho no banco e enviados pela rotina diária `/api/cron/diario` (vercel.json, 13h UTC) com modelos de mensagem aprovados (`lib/laura/modelos.ts`)
+- Pesquisa de satisfação pública (`/p/[token]`): NPS, nota do técnico, pontualidade, problema resolvido; nota 9 ou 10 recebe o link do Google
+- Localização do técnico gravada em `atendimento_eventos` quando ele toca os botões de status; "Estou indo" avisa o cliente
+- Site da empresa (`/a/[slug]`): serviços, área, condições, WhatsApp e agendamento
+- Assinatura Mercado Pago (`/painel/assinatura`, webhook, reconciliação diária); bloqueio só com `COBRANCA_ATIVA=1`
+- Admin da plataforma (`/admin`): empresas, assinatura, custo de IA, liberar sem cobrança
+
 ## Banco compartilhado com a Helô
 O schema `laura` vive no projeto Supabase da Helô (refriclube). Cadastro pela Laura leva `produto: 'laura'` nos metadados e os gatilhos da Helô não criam usuário nem teste para essa pessoa (migração 0003). O app lê `LAURA_SUPABASE_*` com prioridade sobre as variáveis do banco de teste.
 
 ## Ainda não existe (ordem sugerida)
 1. Token de WhatsApp por empresa no Vault (hoje um token só, `WHATSAPP_ACCESS_TOKEN`)
-2. Lembretes, pesquisa de satisfação e modelos de mensagem aprovados pela Meta
-3. Reprocessamento agendado da fila (pg_cron chamando `/api/cron/processar`)
+2. Painel do Dono (combo Helô + Laura)
+3. Ponte com a Helô: manutenções programadas e visitas na agenda da Helô
 4. Site institucional completo por empresa (hoje só o agendamento)
 5. App do técnico separado (PWA em apps/tecnico)
 6. Lembretes e pesquisa de satisfação
