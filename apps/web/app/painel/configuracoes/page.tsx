@@ -1,9 +1,10 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { lerConhecimento } from '@/lib/laura/conhecimento'
+import { situacaoModelos, type SituacaoModelo } from '@/lib/laura/modelos'
 import { exigirMembro } from '@/lib/sessao'
 import { supabaseAdmin } from '@/lib/supabase/admin'
-import { ligarWhatsapp, pausarWhatsapp, salvarConfiguracoes } from './acoes'
+import { ligarWhatsapp, pausarWhatsapp, recadastrarModelos, salvarConfiguracoes } from './acoes'
 
 export const metadata: Metadata = { title: 'Configurações' }
 
@@ -39,6 +40,22 @@ export default async function Configuracoes({
   ])
 
   const c = lerConhecimento(empresa?.conhecimento)
+  let modelos: SituacaoModelo[] | null = null
+  let erroModelos: string | null = null
+  if (conta) {
+    try {
+      modelos = await situacaoModelos(conta.waba_id)
+    } catch (e) {
+      erroModelos = e instanceof Error ? e.message : 'Não foi possível consultar a Meta.'
+    }
+  }
+  const STATUS_MODELO: Record<string, string> = {
+    APPROVED: 'Aprovado',
+    PENDING: 'Em análise',
+    REJECTED: 'Recusado',
+    PAUSED: 'Pausado',
+    DISABLED: 'Desativado',
+  }
   const valor =
     empresa?.valor_visita_centavos != null ? (empresa.valor_visita_centavos / 100).toFixed(2).replace('.', ',') : ''
 
@@ -54,6 +71,7 @@ export default async function Configuracoes({
       )}
       {salvo === '1' && <p className="aviso aviso-certo" role="status">Configurações salvas. A Laura já usa as informações novas.</p>}
       {salvo === 'whatsapp' && <p className="aviso aviso-certo" role="status">WhatsApp ligado. A Laura já responde nesse número.</p>}
+      {salvo === 'modelos' && <p className="aviso aviso-certo" role="status">Modelos enviados para a Meta. A aprovação leva de minutos a algumas horas.</p>}
 
       <form className="formulario" action={salvarConfiguracoes}>
         <h2 className="secao">Atendimento</h2>
@@ -138,6 +156,31 @@ export default async function Configuracoes({
           </>
         ) : (
           <p className="apoio">Nenhum número ligado. A Laura ainda não responde no WhatsApp.</p>
+        )}
+        {conta && (
+          <div className="modelos">
+            <h3>Mensagens automáticas na Meta</h3>
+            <p className="fraco">Lembretes, pesquisa e aviso de técnico a caminho só saem depois que a Meta aprova estes modelos.</p>
+            {erroModelos ? (
+              <p className="aviso aviso-erro">{erroModelos}</p>
+            ) : (
+              <ul>
+                {(modelos ?? []).map((m) => (
+                  <li key={m.nome}>
+                    <span className="numero">{m.nome}</span>
+                    <span className={`etiqueta ${m.status === 'APPROVED' ? '' : 'etiqueta-atencao'}`}>
+                      {STATUS_MODELO[m.status] ?? m.status}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {(erroModelos || modelos?.some((m) => m.status === 'não cadastrado')) && (
+              <form action={recadastrarModelos}>
+                <button className="botao botao-claro">Cadastrar modelos na Meta</button>
+              </form>
+            )}
+          </div>
         )}
         <details className="detalhe">
           <summary>{conta ? 'Trocar o número' : 'Ligar um número'}</summary>

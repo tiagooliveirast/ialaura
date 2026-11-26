@@ -3,6 +3,8 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { comErro, exigirMembro } from '@/lib/sessao'
+import { after } from 'next/server'
+import { cadastrarModelos } from '@/lib/laura/modelos'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 
 const VOLTA = '/painel/configuracoes'
@@ -110,6 +112,9 @@ export async function ligarWhatsapp(form: FormData) {
   )
   if (error) redirect(comErro(VOLTA, `Não foi possível ligar o WhatsApp: ${error.message}`))
 
+  // Cadastra na Meta os modelos de lembrete, pesquisa e aviso, logo depois de responder.
+  after(() => cadastrarModelos(wabaId).catch((e) => console.error('modelos:', e instanceof Error ? e.message : e)))
+
   revalidatePath(VOLTA)
   redirect(`${VOLTA}?salvo=whatsapp`)
 }
@@ -121,4 +126,23 @@ export async function pausarWhatsapp(form: FormData) {
   await supabaseAdmin().from('whatsapp_contas').update({ status }).eq('empresa_id', membro.empresa_id)
   revalidatePath(VOLTA)
   redirect(VOLTA)
+}
+
+/** Tenta de novo cadastrar os modelos na Meta (por exemplo, depois de colar o token). */
+export async function recadastrarModelos() {
+  const { membro } = await exigirMembro()
+  if (membro.papel !== 'dono') redirect(comErro(VOLTA, 'Só o dono pode fazer isso.'))
+  const { data: conta } = await supabaseAdmin()
+    .from('whatsapp_contas')
+    .select('waba_id')
+    .eq('empresa_id', membro.empresa_id)
+    .maybeSingle<{ waba_id: string }>()
+  if (!conta) redirect(comErro(VOLTA, 'Ligue um número de WhatsApp primeiro.'))
+  try {
+    await cadastrarModelos(conta.waba_id)
+  } catch (e) {
+    redirect(comErro(VOLTA, e instanceof Error ? e.message : 'Não foi possível cadastrar os modelos.'))
+  }
+  revalidatePath(VOLTA)
+  redirect(`${VOLTA}?salvo=modelos`)
 }
