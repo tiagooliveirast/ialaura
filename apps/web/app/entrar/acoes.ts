@@ -52,6 +52,17 @@ export async function criarConta(form: FormData) {
   redirect('/comecar')
 }
 
+/** Entrar ou criar conta com o Google. Na volta, /auth/callback troca o código pela sessão. */
+export async function entrarComGoogle() {
+  const sb = await supabaseServidor()
+  const { data, error } = await sb.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: `${siteUrl()}/auth/callback`, queryParams: { prompt: 'select_account' } },
+  })
+  if (error || !data.url) redirect(comErro('/entrar', `Não foi possível abrir o Google: ${error?.message ?? 'sem resposta'}`))
+  redirect(data.url)
+}
+
 export async function sair() {
   const sb = await supabaseServidor()
   await sb.auth.signOut()
