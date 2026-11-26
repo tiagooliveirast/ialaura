@@ -26,9 +26,9 @@ type Assinatura = {
 export default async function PaginaAssinatura({
   searchParams,
 }: {
-  searchParams: Promise<{ erro?: string; voltou?: string }>
+  searchParams: Promise<{ erro?: string; voltou?: string; novo?: string }>
 }) {
-  const { erro, voltou } = await searchParams
+  const { erro, voltou, novo } = await searchParams
   const { sb, membro } = await exigirMembro()
   if (membro.papel !== 'dono') redirect('/painel')
 
@@ -54,7 +54,12 @@ export default async function PaginaAssinatura({
 
   return (
     <div className="estreito sem-topo largura-media">
-      <h1>Assinatura</h1>
+      <h1>{novo ? 'Último passo: assinatura' : 'Assinatura'}</h1>
+      {novo && (
+        <p className="apoio">
+          Empresa cadastrada. Assine para a Laura começar a atender. Depois você preenche as configurações e liga o WhatsApp.
+        </p>
+      )}
       {erro && (
         <p className="aviso aviso-erro" role="alert">
           {erro}

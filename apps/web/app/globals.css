@@ -773,3 +773,12 @@ a {
   border-bottom: 1px solid var(--linha);
   font-size: 0.875rem;
 }
+
+.troca-modo {
+  margin-top: 20px;
+  color: var(--texto-2);
+}
+
+.sem-sublinhado {
+  text-decoration: none;
+}

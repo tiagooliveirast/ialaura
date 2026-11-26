@@ -20,7 +20,7 @@ export default async function Comecar({ searchParams }: { searchParams: Promise<
     <main className="estreito">
       <p className="marca">IA Laura</p>
       <h1>Cadastre a sua empresa</h1>
-      <p className="apoio">São cinco campos. O resto você ajusta depois, com calma.</p>
+      <p className="apoio">Passo 2 de 3. São cinco campos; o resto você ajusta depois, com calma.</p>
 
       {erro && (
         <p className="aviso aviso-erro" role="alert">

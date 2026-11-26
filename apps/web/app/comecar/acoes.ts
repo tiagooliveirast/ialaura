@@ -31,5 +31,5 @@ export async function criarEmpresa(form: FormData) {
     p_meu_nome: d.meuNome,
   })
   if (error) redirect(comErro('/comecar', error.message))
-  redirect('/painel')
+  redirect('/painel/assinatura?novo=1')
 }

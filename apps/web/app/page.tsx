@@ -58,6 +58,9 @@ export default function Inicio() {
             <Link href="/entrar" className="topo-entrar">
               Entrar
             </Link>
+            <Link href="/entrar?modo=cadastro" className="topo-cadastrar">
+              Cadastrar
+            </Link>
           </nav>
         </div>
       </header>
@@ -72,7 +75,7 @@ export default function Inicio() {
               Google para quem gostou. Você só aparece para fazer o serviço.
             </p>
             <div className="acoes">
-              <Link href="/entrar" className="botao botao-grande">
+              <Link href="/entrar?modo=cadastro" className="botao botao-grande">
                 Criar minha conta
               </Link>
               <a href="#como-funciona" className="link-seta">
@@ -184,7 +187,7 @@ export default function Inicio() {
                   <li>Agenda, lembretes e pesquisa de satisfação</li>
                   <li>Pedido de avaliação no Google</li>
                 </ul>
-                <Link href="/entrar" className="botao">
+                <Link href="/entrar?modo=cadastro" className="botao">
                   Criar minha conta
                 </Link>
               </article>
@@ -228,7 +231,7 @@ export default function Inicio() {
         <section className="bloco bloco-escuro fechamento">
           <div className="faixa">
             <h2>O próximo cliente vai chamar hoje. Quem vai responder?</h2>
-            <Link href="/entrar" className="botao botao-grande">
+            <Link href="/entrar?modo=cadastro" className="botao botao-grande">
               Criar minha conta
             </Link>
           </div>

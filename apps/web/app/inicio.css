@@ -524,3 +524,23 @@
     max-width: 92%;
   }
 }
+
+.topo nav .topo-cadastrar {
+  padding: 7px 14px;
+  border: 1px solid var(--laranja-forte);
+  border-radius: var(--raio);
+  background: var(--laranja);
+  color: #fff;
+  font-weight: 600;
+}
+
+.topo nav .topo-cadastrar:hover {
+  background: var(--laranja-forte);
+  color: #fff;
+}
+
+@media (max-width: 640px) {
+  .topo nav {
+    gap: 10px;
+  }
+}

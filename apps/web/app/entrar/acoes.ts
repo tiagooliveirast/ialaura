@@ -9,6 +9,7 @@ function traduzir(mensagem: string): string {
   if (/already registered/i.test(mensagem)) return 'Esse e-mail já tem conta. Entre com a sua senha.'
   if (/email not confirmed/i.test(mensagem)) return 'Confirme o seu e-mail pelo link que enviamos antes de entrar.'
   if (/password should be at least/i.test(mensagem)) return 'A senha precisa ter pelo menos 8 caracteres.'
+  if (/provider is not enabled/i.test(mensagem)) return 'Entrar com o Google ainda não está ativo. Use e-mail e senha.'
   if (/rate limit/i.test(mensagem)) return 'Muitas tentativas seguidas. Espere um minuto e tente de novo.'
   return `Não foi possível concluir: ${mensagem}`
 }
@@ -38,15 +39,16 @@ export async function entrar(form: FormData) {
 }
 
 export async function criarConta(form: FormData) {
+  const volta = '/entrar?modo=cadastro'
   const { email, password } = credenciais(form)
-  if (!email || !password) redirect(comErro('/entrar', 'Preencha e-mail e senha.'))
-  if (password.length < 8) redirect(comErro('/entrar', 'A senha precisa ter pelo menos 8 caracteres.'))
+  if (!email || !password) redirect(`${volta}&erro=${encodeURIComponent('Preencha e-mail e senha.')}`)
+  if (password.length < 8) redirect(`${volta}&erro=${encodeURIComponent('A senha precisa ter pelo menos 8 caracteres.')}`)
 
   const sb = await supabaseServidor()
   // produto = 'laura' faz o banco (compartilhado com a Helô) não criar usuário nem teste da Helô.
   const { data, error } = await sb.auth.signUp({ email, password, options: { data: { produto: 'laura' }, emailRedirectTo: `${siteUrl()}/entrar` },
   })
-  if (error) redirect(comErro('/entrar', traduzir(error.message)))
+  if (error) redirect(`${volta}&erro=${encodeURIComponent(traduzir(error.message))}`)
   // Com confirmação de e-mail ligada no Supabase, a sessão só existe depois do clique no link.
   if (!data.session) redirect('/entrar?aviso=confirme')
   redirect('/comecar')
