@@ -174,7 +174,8 @@ export async function enviarAvisosDaHelo(): Promise<{ enviados: number; falhas: 
       status: string | null
       customer: { name: string; phone: string | null } | null
     }>) {
-      if (['concluida', 'concluido', 'cancelada', 'cancelado', 'inativa', 'inativo'].includes((m.status ?? '').toLowerCase())) continue
+      // A Helô só trata "scheduled" como manutenção futura válida.
+      if (!['scheduled', 'upcoming', 'overdue'].includes(m.status ?? '')) continue
       const telefone = m.customer?.phone ? normalizarTelefone(m.customer.phone) : null
       if (!telefone || !m.customer) continue
       // Reserva o aviso antes de enviar: se já existe, outra execução já cuidou dele.

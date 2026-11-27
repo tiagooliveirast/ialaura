@@ -1,15 +1,24 @@
 import { supabaseAdminHelo } from '@/lib/supabase/admin'
 
-/** Situações da assinatura da Helô que liberam o Painel do Dono. */
-const HELO_LIBERA = ['active', 'complimentary', 'trialing']
-
+/**
+ * Mesma regra de acesso da Helô (src/lib/subscriptions/hooks.ts):
+ * active e complimentary liberam; trialing só com teste no prazo; past_due só na tolerância do Pix;
+ * admin_override_until no futuro libera qualquer situação. free, canceled e blocked não liberam.
+ */
 export async function temHelo(userId: string): Promise<boolean> {
   const { data } = await supabaseAdminHelo()
     .from('user_subscriptions')
-    .select('access_status')
+    .select('access_status, trial_end, pix_past_due_at, admin_override_until')
     .eq('user_id', userId)
-    .maybeSingle<{ access_status: string }>()
-  return !!data && HELO_LIBERA.includes(data.access_status)
+    .maybeSingle<{ access_status: string; trial_end: string | null; pix_past_due_at: string | null; admin_override_until: string | null }>()
+  if (!data) return false
+  const agora = Date.now()
+  const noFuturo = (d: string | null) => !!d && new Date(d).getTime() > agora
+  if (noFuturo(data.admin_override_until)) return true
+  if (data.access_status === 'active' || data.access_status === 'complimentary') return true
+  if (data.access_status === 'trialing') return noFuturo(data.trial_end)
+  if (data.access_status === 'past_due') return noFuturo(data.pix_past_due_at)
+  return false
 }
 
 export type DinheiroHelo = {
@@ -89,11 +98,13 @@ export async function resumoHelo(userId: string, inicioMes: string, hoje: string
   const abertos = q.filter((x) => x.status === 'enviado')
   const w = (os.data ?? []) as Array<{ status: string; payment_status: string | null; total_amount: unknown }>
   const semPagar = w.filter((x) => x.status === 'concluido' && x.payment_status === 'pendente')
+  // scheduled_maintenance.status: scheduled, upcoming, overdue, completed, cancelled.
   const manut = ((man.data ?? []) as Array<{ next_date: string; status: string | null }>).filter(
-    (m) => !['concluida', 'concluido', 'cancelada', 'cancelado', 'inativa', 'inativo'].includes((m.status ?? '').toLowerCase()),
+    (m) => !['completed', 'cancelled'].includes(m.status ?? ''),
   )
+  // planos_manutencao.status: ativo, pausado, encerrado. Só ativo é vigente.
   const pl = ((planos.data ?? []) as Array<{ valor_mensal: unknown; data_fim: string | null; status: string | null }>).filter(
-    (p) => (!p.data_fim || p.data_fim >= hoje) && !['cancelado', 'cancelada', 'encerrado', 'inativo'].includes((p.status ?? '').toLowerCase()),
+    (p) => p.status === 'ativo',
   )
   const estrelas = ((aval.data ?? []) as Array<{ estrelas: number }>).map((a) => a.estrelas)
   const meta = (perfil.data as { monthly_profit_goal?: unknown } | null)?.monthly_profit_goal
@@ -102,7 +113,8 @@ export async function resumoHelo(userId: string, inicioMes: string, hoje: string
   return {
     vencidoAReceber: ((vencidos.data ?? []) as Array<{ amount: unknown }>).reduce((t, x) => t + cent(x.amount), 0),
     metaLucro: meta != null && Number(meta) > 0 ? cent(meta) : null,
-    retiradaPct: pct != null && Number(pct) > 0 ? Number(pct) : null,
+    // A tabela foi criada fora do repositório da Helô: aceita 30 (por cento) ou 0,3 (fração).
+    retiradaPct: pct != null && Number(pct) > 0 ? (Number(pct) <= 1 ? Math.round(Number(pct) * 1000) / 10 : Number(pct)) : null,
     orcamentos: {
       enviados: q.filter((x) => x.status !== 'rascunho').length,
       aprovados: q.filter((x) => x.status === 'aprovado').length,
