@@ -115,6 +115,7 @@ export async function cadastrarModelos(wabaId: string): Promise<SituacaoModelo[]
   const atuais = await situacaoModelos(wabaId)
   const faltando = new Set(atuais.filter((s) => s.status === 'não cadastrado').map((s) => s.nome))
 
+  const falhas: string[] = []
   for (const m of Object.values(MODELOS)) {
     if (!faltando.has(m.nome)) continue
     const resp = await fetch(`https://graph.facebook.com/${VERSAO}/${wabaId}/message_templates`, {
@@ -133,11 +134,15 @@ export async function cadastrarModelos(wabaId: string): Promise<SituacaoModelo[]
       }),
     })
     if (!resp.ok) {
-      const dados = (await resp.json().catch(() => ({}))) as { error?: { message?: string; error_user_msg?: string } }
-      throw new ErroWhatsapp(
-        `A Meta recusou o modelo "${m.nome}": ${dados.error?.error_user_msg ?? dados.error?.message ?? resp.status}`,
-      )
+      const dados = (await resp.json().catch(() => ({}))) as {
+        error?: { message?: string; error_user_msg?: string; error_subcode?: number }
+      }
+      const motivo = dados.error?.error_user_msg ?? dados.error?.message ?? String(resp.status)
+      // Já existe (por exemplo, cadastrado agora há pouco por outro clique): não é erro, segue para o próximo.
+      if (dados.error?.error_subcode === 2388023 || /já existe|already exists/i.test(motivo)) continue
+      falhas.push(`"${m.nome}": ${motivo}`)
     }
   }
+  if (falhas.length) throw new ErroWhatsapp(`A Meta recusou ${falhas.length} modelo(s). ${falhas.join(' · ')}`)
   return situacaoModelos(wabaId)
 }
