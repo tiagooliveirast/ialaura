@@ -20,7 +20,11 @@ export async function exigirMembro() {
     .eq('ativo', true)
     .limit(1)
     .maybeSingle<Membro>()
-  if (!membro) redirect('/comecar')
+  if (!membro) {
+    // Conta só de administração da plataforma (sem empresa): vai direto para o admin.
+    const { data: admin } = await sb.rpc('eh_admin')
+    redirect(admin === true ? '/admin' : '/comecar')
+  }
 
   const { data: empresa } = await sb
     .from('empresas')
