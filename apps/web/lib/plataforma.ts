@@ -3,7 +3,7 @@ export const PLATAFORMA = {
   nome: process.env.PLATAFORMA_NOME ?? 'NetxGestão',
   responsavel: process.env.PLATAFORMA_RESPONSAVEL ?? 'Tiago Oliveira da Silva',
   documento: process.env.PLATAFORMA_CNPJ ?? '',
-  email: process.env.CONTATO_EMAIL ?? '',
+  email: process.env.CONTATO_EMAIL ?? 'clubedalinhabranca@gmail.com',
   atualizado: '26 de novembro de 2026',
 }
 
